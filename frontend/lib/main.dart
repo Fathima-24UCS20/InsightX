@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
-import 'app_shell.dart';
+
+import 'screens/login.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const SalesMarketingApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SalesMarketingApp extends StatelessWidget {
+  const SalesMarketingApp({super.key});
+
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "Sales & Marketing AI",
+
+      title: 'Sales & Marketing Agent',
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        scaffoldBackgroundColor: Colors.grey.shade100,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6C4DFF)),
       ),
-      home: const AppShell(),
+      home: const LoginScreen(),
     );
   }
 }
+

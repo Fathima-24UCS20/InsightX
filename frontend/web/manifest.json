@@ -1,6 +1,6 @@
 {
-    "name": "frontend",
-    "short_name": "frontend",
+    "name": "sales_marketing_ai",
+    "short_name": "sales_marketing_ai",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
