@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'screens/login.dart';
 
 void main() {
@@ -8,10 +9,12 @@ void main() {
 class SalesMarketingApp extends StatelessWidget {
   const SalesMarketingApp({super.key});
 
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+
       title: 'Sales & Marketing Agent',
       theme: ThemeData(
         useMaterial3: true,
@@ -21,3 +24,4 @@ class SalesMarketingApp extends StatelessWidget {
     );
   }
 }
+
