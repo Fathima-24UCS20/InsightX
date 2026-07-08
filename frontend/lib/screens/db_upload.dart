@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
-import '../../widgets/data_drop.dart';
-import '../../widgets/upload_dataset.dart';
-import '../../services/upload_services.dart';
+import '../widgets/data_drop.dart';
+import '../widgets/upload_dataset.dart';
+import '../services/upload_services.dart';
 
 class DatasetUploadPage extends StatefulWidget {
   const DatasetUploadPage({super.key});
@@ -61,8 +61,9 @@ class _DatasetUploadPageState extends State<DatasetUploadPage> {
     if (!mounted) return;
 
     setState(() {
-      _statuses[_selectedType] =
-          result.success ? UploadStatus.uploaded : UploadStatus.failed;
+      _statuses[_selectedType] = result.success
+          ? UploadStatus.uploaded
+          : UploadStatus.failed;
       // This is the fix: store the row count from the backend response so
       // the table can actually display it instead of staying null forever.
       _rowCounts[_selectedType] = result.rows;
@@ -70,9 +71,11 @@ class _DatasetUploadPageState extends State<DatasetUploadPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(result.success
-            ? "${_selectedType.label} uploaded successfully"
-            : (result.error ?? "${_selectedType.label} upload failed")),
+        content: Text(
+          result.success
+              ? "${_selectedType.label} uploaded successfully"
+              : (result.error ?? "${_selectedType.label} upload failed"),
+        ),
         backgroundColor: result.success ? Colors.green : Colors.red,
       ),
     );
@@ -81,12 +84,14 @@ class _DatasetUploadPageState extends State<DatasetUploadPage> {
   @override
   Widget build(BuildContext context) {
     final tableRows = DatasetType.values
-        .map((t) => DatasetRowData(
-              type: t,
-              fileName: _selectedFiles[t]?.name ?? "",
-              status: _statuses[t]!,
-              rows: _rowCounts[t],
-            ))
+        .map(
+          (t) => DatasetRowData(
+            type: t,
+            fileName: _selectedFiles[t]?.name ?? "",
+            status: _statuses[t]!,
+            rows: _rowCounts[t],
+          ),
+        )
         .toList();
 
     return Padding(
@@ -124,7 +129,10 @@ class _DatasetUploadPageState extends State<DatasetUploadPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepPurple,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

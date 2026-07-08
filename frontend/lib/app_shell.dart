@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'widgets/side_bar.dart';
-import 'screens/dashboard/dashboard_page.dart';
-import 'screens/dataset_upload/db_upload.dart';
+import 'screens/dashboard_page.dart';
+import 'screens/db_upload.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});

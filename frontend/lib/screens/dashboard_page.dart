@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../models/dashboard_stats.dart';
-import '../../services/analytics_services.dart';
-import '../../widgets/kpi_card.dart';
-import '../../widgets/dashboard_panel.dart';
+import '../models/dashboard_stats.dart';
+import '../services/analytics_services.dart';
+import '../widgets/kpi_card.dart';
+import '../widgets/dashboard_panel.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -63,7 +63,10 @@ class _DashboardPageState extends State<DashboardPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: Padding(padding: EdgeInsets.only(top: 80), child: CircularProgressIndicator()),
+              child: Padding(
+                padding: EdgeInsets.only(top: 80),
+                child: CircularProgressIndicator(),
+              ),
             );
           }
           if (snapshot.hasError) {
@@ -78,7 +81,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
-                    ElevatedButton(onPressed: _refresh, child: const Text("Retry")),
+                    ElevatedButton(
+                      onPressed: _refresh,
+                      child: const Text("Retry"),
+                    ),
                   ],
                 ),
               ),
@@ -111,7 +117,8 @@ class _DashboardPageState extends State<DashboardPage> {
               iconColor: Colors.deepPurple,
               iconBg: Colors.deepPurple.withValues(alpha: 0.08),
               title: "Total Customers",
-              displayValue: stats.totalCustomers.value?.toStringAsFixed(0) ?? "—",
+              displayValue:
+                  stats.totalCustomers.value?.toStringAsFixed(0) ?? "—",
               changePct: stats.totalCustomers.changePct,
               available: stats.totalCustomers.available,
             ),
@@ -129,7 +136,9 @@ class _DashboardPageState extends State<DashboardPage> {
               iconColor: const Color(0xFFD64545),
               iconBg: const Color(0xFFFDE7E7),
               title: "Conversion Rate",
-              displayValue: stats.conversionRate.value != null ? "${stats.conversionRate.value}%" : "—",
+              displayValue: stats.conversionRate.value != null
+                  ? "${stats.conversionRate.value}%"
+                  : "—",
               changePct: stats.conversionRate.changePct,
               available: stats.conversionRate.available,
             ),
@@ -138,7 +147,8 @@ class _DashboardPageState extends State<DashboardPage> {
               iconColor: const Color(0xFF14B8A6),
               iconBg: const Color(0xFFE0F7F4),
               title: "Active Campaigns",
-              displayValue: stats.activeCampaigns.value?.toStringAsFixed(0) ?? "—",
+              displayValue:
+                  stats.activeCampaigns.value?.toStringAsFixed(0) ?? "—",
               changePct: stats.activeCampaigns.changePct,
               available: stats.activeCampaigns.available,
             ),
@@ -152,12 +162,20 @@ class _DashboardPageState extends State<DashboardPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Welcome back, John! 👋",
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Welcome back, John! 👋",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         "Here's what's happening with your business today.",
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13.5),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13.5,
+                        ),
                       ),
                     ],
                   ),
@@ -168,8 +186,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ],
@@ -184,18 +207,25 @@ class _DashboardPageState extends State<DashboardPage> {
                       spacing: 16,
                       runSpacing: 16,
                       children: kpis
-                          .map((k) => SizedBox(width: (constraints.maxWidth - 16) / 2, child: KpiCard(data: k)))
+                          .map(
+                            (k) => SizedBox(
+                              width: (constraints.maxWidth - 16) / 2,
+                              child: KpiCard(data: k),
+                            ),
+                          )
                           .toList(),
                     );
                   }
                   return Row(
                     children: kpis
-                        .map((k) => Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 16),
-                                child: KpiCard(data: k),
-                              ),
-                            ))
+                        .map(
+                          (k) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: KpiCard(data: k),
+                            ),
+                          ),
+                        )
                         .toList(),
                   );
                 },
@@ -208,13 +238,27 @@ class _DashboardPageState extends State<DashboardPage> {
                   Widget rowOf(List<Widget> pair) {
                     if (isNarrow) {
                       return Column(
-                        children: pair.map((p) => Padding(padding: const EdgeInsets.only(bottom: 16), child: p)).toList(),
+                        children: pair
+                            .map(
+                              (p) => Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: p,
+                              ),
+                            )
+                            .toList(),
                       );
                     }
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: pair
-                          .map((p) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 16), child: p)))
+                          .map(
+                            (p) => Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 16),
+                                child: p,
+                              ),
+                            ),
+                          )
                           .toList(),
                     );
                   }
@@ -223,7 +267,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     children: [
                       rowOf(const [AiAlertsPanel(), AiRecommendationsPanel()]),
                       const SizedBox(height: 16),
-                      rowOf(const [TodaysActivityPanel(), RecentActivityPanel()]),
+                      rowOf(const [
+                        TodaysActivityPanel(),
+                        RecentActivityPanel(),
+                      ]),
                     ],
                   );
                 },
