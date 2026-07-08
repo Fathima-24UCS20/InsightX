@@ -9,7 +9,7 @@ from app.routes.analytics import router as analytics_router
 from app.routes.upload import router as upload_router
 
 # Database initialization
-from database import init_db
+from app.database import init_db
 
 app = FastAPI()
 
