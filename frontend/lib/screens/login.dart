@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dashboard.dart';
+import '../app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // For now, every authenticated user goes to the same dashboard.
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const Dashboard()),
+          MaterialPageRoute(builder: (context) => const AppShell()),
         );
       } else {
         final error = jsonDecode(response.body);

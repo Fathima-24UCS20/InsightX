@@ -26,6 +26,10 @@ def hash_password(password: str):
 
 
 def verify_password(plain_password: str, hashed_password: str):
+    print("Plain password:", plain_password)
+    print("Plain password length:", len(plain_password))
+    print("Hashed password:", hashed_password)
+    print("Hashed password length:", len(hashed_password))
     return pwd_context.verify(plain_password, hashed_password)
 
 
