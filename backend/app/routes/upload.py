@@ -3,7 +3,7 @@ import pandas as pd
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from sqlalchemy.exc import IntegrityError
 
-from db import engine
+from database import engine
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 

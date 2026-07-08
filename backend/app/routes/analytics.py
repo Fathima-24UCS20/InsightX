@@ -17,7 +17,7 @@ TODO (to enable the last two cards):
 from fastapi import APIRouter
 from sqlalchemy import text
 
-from db import engine
+from database import engine
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
