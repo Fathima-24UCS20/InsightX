@@ -24,6 +24,7 @@ class AppSidebar extends StatelessWidget {
     SidebarItem(icon: Icons.people_rounded, label: "Customers"),
     SidebarItem(icon: Icons.inventory_2_rounded, label: "Products"),
     SidebarItem(icon: Icons.receipt_long_rounded, label: "Orders"),
+    SidebarItem(icon: Icons.track_changes_rounded, label: "Leads"),
     SidebarItem(icon: Icons.insights_rounded, label: "Analytics"),
     SidebarItem(icon: Icons.settings_rounded, label: "Settings"),
   ];
@@ -48,7 +49,11 @@ class AppSidebar extends StatelessWidget {
                     color: Colors.deepPurpleAccent,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.auto_graph, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.auto_graph,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 const Text(
@@ -83,7 +88,10 @@ class AppSidebar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     "Admin",
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -100,14 +108,20 @@ class _SidebarTile extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  const _SidebarTile({required this.item, required this.active, required this.onTap});
+  const _SidebarTile({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Material(
-        color: active ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
+        color: active
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

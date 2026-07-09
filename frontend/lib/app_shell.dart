@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'screens/leads_page.dart';
 import 'widgets/side_bar.dart';
 import 'screens/dashboard_page.dart';
 import 'screens/db_upload.dart';
@@ -18,18 +18,30 @@ class _AppShellState extends State<AppShell> {
     switch (index) {
       case 0:
         return const DashboardPage();
+
       case 1:
         return const DatasetUploadPage();
+
+      case 2:
+        return Center(child: Text("Customers"));
+
+      case 3:
+        return Center(child: Text("Products"));
+
+      case 4:
+        return Center(child: Text("Orders"));
+
+      case 5:
+        return const LeadsPage();
+
+      case 6:
+        return Center(child: Text("Analytics"));
+
+      case 7:
+        return Center(child: Text("Settings"));
+
       default:
-        // Customers / Products / Orders / Analytics / Settings screens
-        // aren't built yet — add them here as you build them out.
-        final label = AppSidebar.items[index].label;
-        return Center(
-          child: Text(
-            "$label — coming soon",
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
-          ),
-        );
+        return const SizedBox();
     }
   }
 
