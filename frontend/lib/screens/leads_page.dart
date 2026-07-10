@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import '../widgets/lead_summary_card.dart';
 import '../widgets/lead_table.dart';
-import '../widgets/ai_insight_card.dart';
+import '../widgets/lead_suggestion_card.dart';
+import '../widgets/recent_lead_card.dart';
+import '../widgets/lead_status_chart.dart';
 
 class LeadsPage extends StatelessWidget {
   const LeadsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(30),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,65 +90,81 @@ class LeadsPage extends StatelessWidget {
           const SizedBox(height: 30),
 
           // ========================= KPI CARDS =========================
-          Column(
-            children: [
-              Row(
-                children: const [
-                  LeadSummaryCard(
-                    icon: Icons.people,
-                    title: "Total Leads",
-                    value: "350",
-                    subtitle: "+12 this week",
-                    iconColor: Colors.blue,
-                    iconBackground: Color(0xFFE8F3FF),
-                  ),
-                  LeadSummaryCard(
-                    icon: Icons.local_fire_department,
-                    title: "Hot Leads",
-                    value: "62",
-                    subtitle: "High Priority",
-                    iconColor: Colors.red,
-                    iconBackground: Color(0xFFFFECE8),
-                  ),
-
-                  LeadSummaryCard(
-                    icon: Icons.psychology,
-                    title: "Avg AI Score",
-                    value: "74",
-                    subtitle: "Out of 100",
-                    iconColor: Colors.deepPurple,
-                    iconBackground: Color(0xFFF1EBFF),
-                  ),
-                  LeadSummaryCard(
-                    icon: Icons.notifications_active,
-                    title: "Follow-ups",
-                    value: "18",
-                    subtitle: "Due Today",
-                    iconColor: Colors.green,
-                    iconBackground: Color(0xFFEAF8ED),
-                  ),
-                ],
+          Row(
+            children: const [
+              LeadSummaryCard(
+                icon: Icons.people,
+                title: "Total Leads",
+                value: "350",
+                subtitle: "+12 this week",
+                iconColor: Colors.blue,
+                iconBackground: Color(0xFFE8F3FF),
               ),
-
-              //SizedBox(height: 20),
+              LeadSummaryCard(
+                icon: Icons.local_fire_department,
+                title: "Hot Leads",
+                value: "62",
+                subtitle: "High Priority",
+                iconColor: Colors.red,
+                iconBackground: Color(0xFFFFECE8),
+              ),
+              LeadSummaryCard(
+                icon: Icons.psychology,
+                title: "Avg AI Score",
+                value: "74",
+                subtitle: "Out of 100",
+                iconColor: Colors.deepPurple,
+                iconBackground: Color(0xFFF1EBFF),
+              ),
+              LeadSummaryCard(
+                icon: Icons.notifications_active,
+                title: "Follow-ups",
+                value: "18",
+                subtitle: "Due Today",
+                iconColor: Colors.green,
+                iconBackground: Color(0xFFEAF8ED),
+              ),
             ],
           ),
 
-          const SizedBox(height: 25),
+          const SizedBox(height: 30),
 
-          // ========================= LEAD TABLE =========================
-          Expanded(
+          // ========================= TOP SECTION =========================
+          SizedBox(
+            height: 500,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Expanded(flex: 3, child: LeadTable()),
+              children: const [
+                Expanded(flex: 3, child: LeadTable()),
 
-                const SizedBox(width: 20),
+                SizedBox(width: 20),
 
-                const Expanded(flex: 2, child: AIInsightsCard()),
+                Expanded(flex: 2, child: LeadSuggestionsCard()),
               ],
             ),
           ),
+
+          const SizedBox(height: 20),
+
+          // ========================= BOTTOM SECTION =========================
+          SizedBox(
+            height: 340,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Expanded(
+                  flex: 3,
+                  child: LeadStatusChart(hot: 62, warm: 158, cold: 130),
+                ),
+
+                SizedBox(width: 20),
+
+                Expanded(flex: 2, child: RecentLeadCard()),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
