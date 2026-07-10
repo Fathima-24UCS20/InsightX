@@ -7,10 +7,16 @@ class AIInsightsCard extends StatelessWidget {
     required IconData icon,
     required Color color,
     required String title,
-    required String subtitle,
+    required String description,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -20,7 +26,7 @@ class AIInsightsCard extends StatelessWidget {
             child: Icon(icon, color: color, size: 18),
           ),
 
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
 
           Expanded(
             child: Column(
@@ -30,15 +36,16 @@ class AIInsightsCard extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 15,
+                    color: Color(0xFF1B2559),
                   ),
                 ),
 
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
 
                 Text(
-                  subtitle,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  description,
+                  style: TextStyle(color: Colors.grey.shade600, height: 1.4),
                 ),
               ],
             ),
@@ -70,26 +77,36 @@ class AIInsightsCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          buildInsight(
-            icon: Icons.local_fire_department,
-            color: Colors.red,
-            title: "Carlos is likely to purchase again",
-            subtitle: "High purchase frequency and strong order history.",
-          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  buildInsight(
+                    icon: Icons.star,
+                    color: Colors.orange,
+                    title: "High Priority Lead",
+                    description:
+                        "Carlos has an AI Score of 94. Recommend premium offers to maximize conversion.",
+                  ),
 
-          buildInsight(
-            icon: Icons.email,
-            color: Colors.blue,
-            title: "Jennifer needs a follow-up",
-            subtitle: "No orders in the last 90 days.",
-          ),
+                  buildInsight(
+                    icon: Icons.email_outlined,
+                    color: Colors.blue,
+                    title: "Follow-up Needed",
+                    description:
+                        "Jennifer hasn't placed an order in over 90 days. Send a promotional email.",
+                  ),
 
-          buildInsight(
-            icon: Icons.shopping_bag,
-            color: Colors.green,
-            title: "Recommend accessories",
-            subtitle:
-                "Customers who bought laptops often buy mice and keyboards.",
+                  buildInsight(
+                    icon: Icons.shopping_bag_outlined,
+                    color: Colors.green,
+                    title: "Cross-sell Opportunity",
+                    description:
+                        "David purchased a laptop. Recommend accessories like a mouse and keyboard.",
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

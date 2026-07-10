@@ -7,6 +7,28 @@ class SidebarItem {
   const SidebarItem({required this.icon, required this.label});
 }
 
+class SidebarSection extends StatelessWidget {
+  final String title;
+
+  const SidebarSection({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
+      child: Text(
+        title.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white54,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
 class AppSidebar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
@@ -17,17 +39,31 @@ class AppSidebar extends StatelessWidget {
     required this.onItemSelected,
   });
 
-  // Index order here drives routing in AppShell — keep them in sync.
-  static const items = [
+  static const List<SidebarItem> items = [
     SidebarItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
     SidebarItem(icon: Icons.cloud_upload_rounded, label: "Dataset Upload"),
     SidebarItem(icon: Icons.people_rounded, label: "Customers"),
-    SidebarItem(icon: Icons.inventory_2_rounded, label: "Products"),
-    SidebarItem(icon: Icons.receipt_long_rounded, label: "Orders"),
-    SidebarItem(icon: Icons.track_changes_rounded, label: "Leads"),
-    SidebarItem(icon: Icons.insights_rounded, label: "Analytics"),
+    SidebarItem(icon: Icons.campaign_rounded, label: "Campaign Generator"),
+    SidebarItem(icon: Icons.auto_awesome_rounded, label: "Social Media"),
+    SidebarItem(icon: Icons.person_search_rounded, label: "Leads"),
+    SidebarItem(icon: Icons.insights_rounded, label: "AI Analytics"),
     SidebarItem(icon: Icons.settings_rounded, label: "Settings"),
   ];
+
+  Widget _buildSection(String title, int startIndex, int endIndex) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SidebarSection(title: title),
+        for (int i = startIndex; i <= endIndex; i++)
+          _SidebarTile(
+            item: items[i],
+            active: selectedIndex == i,
+            onTap: () => onItemSelected(i),
+          ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +71,10 @@ class AppSidebar extends StatelessWidget {
       width: 230,
       color: const Color(0xFF1B2559),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 28),
+
+          // Logo
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
@@ -67,14 +104,30 @@ class AppSidebar extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 36),
-          for (var i = 0; i < items.length; i++)
-            _SidebarTile(
-              item: items[i],
-              active: i == selectedIndex,
-              onTap: () => onItemSelected(i),
+
+          const SizedBox(height: 20),
+
+          // Scrollable Menu
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSection("Main", 0, 0),
+
+                  _buildSection("Data", 1, 2),
+
+                  _buildSection("AI Marketing Studio", 3, 5),
+
+                  _buildSection("Workspace", 6, 7),
+                ],
+              ),
             ),
-          const Spacer(),
+          ),
+
+          const Divider(color: Colors.white24, thickness: 1, height: 1),
+
+          // Bottom Profile
           Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
@@ -82,7 +135,7 @@ class AppSidebar extends StatelessWidget {
                 const CircleAvatar(
                   radius: 16,
                   backgroundColor: Colors.white24,
-                  child: Icon(Icons.person, size: 18, color: Colors.white),
+                  child: Icon(Icons.person, color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -117,7 +170,7 @@ class _SidebarTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Material(
         color: active
             ? Colors.white.withValues(alpha: 0.08)
@@ -127,7 +180,7 @@ class _SidebarTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
                 Container(
@@ -142,12 +195,15 @@ class _SidebarTile extends StatelessWidget {
                   color: active ? Colors.white : Colors.white60,
                 ),
                 const SizedBox(width: 14),
-                Text(
-                  item.label,
-                  style: TextStyle(
-                    color: active ? Colors.white : Colors.white60,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                    fontSize: 14,
+                Expanded(
+                  child: Text(
+                    item.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: active ? Colors.white : Colors.white60,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],
