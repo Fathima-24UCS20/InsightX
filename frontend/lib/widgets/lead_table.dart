@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'lead_table_row.dart';
+import '../models/lead.dart';
+import '../services/lead_services.dart';
 
 class LeadTable extends StatelessWidget {
   const LeadTable({super.key});
+
+  Color getStatusColor(String status) {
+    switch (status) {
+      case "Hot":
+        return Colors.red;
+      case "Warm":
+        return Colors.orange;
+      default:
+        return Colors.blue;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,37 +116,35 @@ class LeadTable extends StatelessWidget {
           const SizedBox(height: 12),
 
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: const [
-                  LeadTableRow(
-                    customer: "Carlos",
-                    orders: "12",
-                    spend: "₹2.5L",
-                    score: "94",
-                    status: "Hot",
-                    statusColor: Colors.red,
-                  ),
+            child: FutureBuilder<List<Lead>>(
+              future: LeadService().fetchLeads(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                  LeadTableRow(
-                    customer: "Jennifer",
-                    orders: "8",
-                    spend: "₹1.8L",
-                    score: "81",
-                    status: "Warm",
-                    statusColor: Colors.orange,
-                  ),
+                if (snapshot.hasError) {
+                  return Center(child: Text(snapshot.error.toString()));
+                }
 
-                  LeadTableRow(
-                    customer: "David",
-                    orders: "3",
-                    spend: "₹45K",
-                    score: "38",
-                    status: "Cold",
-                    statusColor: Colors.blue,
-                  ),
-                ],
-              ),
+                final leads = snapshot.data!;
+
+                return ListView.builder(
+                  itemCount: leads.length,
+                  itemBuilder: (context, index) {
+                    final lead = leads[index];
+
+                    return LeadTableRow(
+                      customer: lead.customer,
+                      orders: lead.orders.toString(),
+                      spend: "₹${lead.spend.toStringAsFixed(0)}",
+                      score: lead.score.toString(),
+                      status: lead.status,
+                      statusColor: getStatusColor(lead.status),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
