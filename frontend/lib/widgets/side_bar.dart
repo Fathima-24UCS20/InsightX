@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/login.dart';
 
 class SidebarItem {
   final IconData icon;
@@ -139,11 +141,72 @@ class AppSidebar extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    "Admin",
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 13,
+                  child: PopupMenuButton<String>(
+                    tooltip: '',
+                    offset: const Offset(0, -60),
+                    color: const Color(0xFF2B315C), // Match your sidebar theme
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                        color: Color(0xFF4A4F7A),
+                        width: 1,
+                      ),
+                    ),
+                    onSelected: (value) async {
+                      if (value == 'logout') {
+                        // logout code
+                        SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+
+                        await prefs.remove('access_token'); // or prefs.clear()
+
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.logout_rounded,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'Logout',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Text(
+                          "Admin",
+                          style: const TextStyle(
+                            color: Colors
+                                .white70, // same as your sidebar menu text
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Icon(Icons.arrow_drop_down),
+                      ],
                     ),
                   ),
                 ),
