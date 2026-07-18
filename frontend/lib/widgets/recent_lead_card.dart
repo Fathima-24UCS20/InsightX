@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
+import '../models/recent_lead.dart';
+import '../services/lead_services.dart';
+import 'package:intl/intl.dart';
 
 class RecentLeadCard extends StatelessWidget {
   const RecentLeadCard({super.key});
 
-  Widget activityTile({
-    required IconData icon,
-    required Color iconColor,
-    required String activity,
-    required String time,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+  Widget activityTile(RecentLead lead) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FD),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: iconColor.withOpacity(0.15),
-            child: Icon(icon, color: iconColor, size: 18),
+            backgroundColor: Colors.blue.withOpacity(.15),
+            child: const Icon(
+              Icons.shopping_cart_outlined,
+              color: Colors.blue,
+              size: 18,
+            ),
           ),
 
           const SizedBox(width: 12),
@@ -27,19 +35,27 @@ class RecentLeadCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  activity,
+                  lead.customer,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1B2559),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
                   ),
                 ),
 
                 const SizedBox(height: 4),
 
                 Text(
-                  time,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  "Purchased ₹${NumberFormat('#,##,###').format(lead.spend)}",
+                  style: TextStyle(color: Colors.grey.shade700),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  DateFormat(
+                    "MMM dd, yyyy",
+                  ).format(DateTime.parse(lead.lastPurchase)),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
@@ -79,42 +95,27 @@ class RecentLeadCard extends StatelessWidget {
           const SizedBox(height: 20),
 
           Expanded(
-            child: ListView(
-              children: [
-                activityTile(
-                  icon: Icons.shopping_cart_outlined,
-                  iconColor: Colors.blue,
-                  activity: "Carlos purchased Gaming Laptop",
-                  time: "2 hours ago",
-                ),
+            child: FutureBuilder<List<RecentLead>>(
+              future: LeadService().fetchRecentLeads(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                const Divider(),
+                if (snapshot.hasError) {
+                  return Center(child: Text(snapshot.error.toString()));
+                }
 
-                activityTile(
-                  icon: Icons.local_offer_outlined,
-                  iconColor: Colors.orange,
-                  activity: "Festival offer sent to Jennifer",
-                  time: "5 hours ago",
-                ),
+                final recent = snapshot.data!;
 
-                const Divider(),
-
-                activityTile(
-                  icon: Icons.person_add_alt_1_outlined,
-                  iconColor: Colors.green,
-                  activity: "Sarah created a new account",
-                  time: "Yesterday",
-                ),
-
-                const Divider(),
-
-                activityTile(
-                  icon: Icons.workspace_premium_outlined,
-                  iconColor: Colors.deepPurple,
-                  activity: "David upgraded to Premium",
-                  time: "2 days ago",
-                ),
-              ],
+                return ListView.builder(
+                  itemCount: recent.length,
+                  itemBuilder: (context, index) {
+                    final lead = recent[index];
+                    return activityTile(lead);
+                  },
+                );
+              },
             ),
           ),
         ],

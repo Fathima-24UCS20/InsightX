@@ -1,4 +1,5 @@
 from datetime import date
+
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -151,6 +152,7 @@ def get_leads_data(db: Session):
             Customer.c_id,
             Customer.c_name,
             Customer.city,
+            Customer.email,
             Customer.registration_date,
 
             func.count(Order.order_id).label("orders"),
@@ -167,6 +169,7 @@ def get_leads_data(db: Session):
             Customer.c_id,
             Customer.c_name,
             Customer.city,
+            Customer.email,
             Customer.registration_date,
         )
         .all()
@@ -211,6 +214,7 @@ def get_leads_data(db: Session):
             {
                 "customer": row.c_name,
                 "city": row.city,
+                "email": row.email,
                 "registration_date": row.registration_date,
                 "last_purchase": row.last_purchase,
                 "orders": row.orders,
@@ -272,35 +276,28 @@ def get_leads_chart(db: Session):
 def get_recent_leads(db: Session, limit: int = 5):
     leads = get_leads_data(db)
 
-    leads.sort(key=lambda x: x["score"], reverse=True)
+    leads = [lead for lead in leads if lead["last_purchase"] is not None]
+
+    leads.sort(
+        key=lambda x: x["last_purchase"],
+        reverse=True,
+    )
 
     return leads[:limit]
 
 def get_lead_suggestions(db: Session):
     leads = get_leads_data(db)
 
+    leads.sort(key=lambda x: x["score"], reverse=True)
+
     suggestions = []
 
-    hot = [lead for lead in leads if lead["status"] == "Hot"]
-    warm = [lead for lead in leads if lead["status"] == "Warm"]
-    cold = [lead for lead in leads if lead["status"] == "Cold"]
-
-    if hot:
-        suggestions.append(
-            f"{len(hot)} high-value customers should be contacted immediately."
-        )
-
-    if warm:
-        suggestions.append(
-            f"{len(warm)} customers are good candidates for promotional emails."
-        )
-
-    if cold:
-        suggestions.append(
-            f"{len(cold)} inactive customers could receive discount offers."
-        )
-
-    if not suggestions:
-        suggestions.append("No recommendations available.")
+    for lead in leads[:5]:
+        suggestions.append({
+            "customer": lead["customer"],
+            "recommendation": lead["recommendation"],
+            "reason": lead["reason"],
+            "status": lead["status"],
+        })
 
     return suggestions

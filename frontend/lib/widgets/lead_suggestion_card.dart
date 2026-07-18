@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/lead_suggestions.dart';
+import '../services/lead_services.dart';
 
 class LeadSuggestionsCard extends StatelessWidget {
   const LeadSuggestionsCard({super.key});
@@ -109,35 +111,58 @@ class LeadSuggestionsCard extends StatelessWidget {
           const SizedBox(height: 20),
 
           Expanded(
-            child: ListView(
-              children: [
-                suggestionTile(
-                  icon: Icons.shopping_bag_outlined,
-                  color: Colors.blue,
-                  title: "Product Recommendation",
-                  customer: "Carlos",
-                  suggestion: "Wireless Mouse + Laptop Bag",
-                  buttonText: "View Products",
-                ),
+            child: FutureBuilder<List<LeadSuggestion>>(
+              future: LeadService().fetchSuggestions(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                suggestionTile(
-                  icon: Icons.local_offer_outlined,
-                  color: Colors.orange,
-                  title: "Promotion Opportunity",
-                  customer: "Jennifer",
-                  suggestion: "Festival Sale -15%",
-                  buttonText: "Send Offer",
-                ),
+                if (snapshot.hasError) {
+                  return Center(child: Text(snapshot.error.toString()));
+                }
 
-                suggestionTile(
-                  icon: Icons.workspace_premium_outlined,
-                  color: Colors.green,
-                  title: "Loyalty Upgrade",
-                  customer: "David",
-                  suggestion: "Premium Membership",
-                  buttonText: "Invite",
-                ),
-              ],
+                final suggestions = snapshot.data!;
+
+                return ListView.builder(
+                  itemCount: suggestions.length,
+                  itemBuilder: (context, index) {
+                    final item = suggestions[index];
+
+                    Color color;
+                    IconData icon;
+                    String buttonText;
+
+                    switch (item.status) {
+                      case "Hot":
+                        color = Colors.red;
+                        icon = Icons.priority_high;
+                        buttonText = "Contact";
+                        break;
+
+                      case "Warm":
+                        color = Colors.orange;
+                        icon = Icons.local_offer_outlined;
+                        buttonText = "Email";
+                        break;
+
+                      default:
+                        color = Colors.blue;
+                        icon = Icons.discount_outlined;
+                        buttonText = "Offer";
+                    }
+
+                    return suggestionTile(
+                      icon: icon,
+                      color: color,
+                      title: item.recommendation,
+                      customer: item.customer,
+                      suggestion: item.reason,
+                      buttonText: buttonText,
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],

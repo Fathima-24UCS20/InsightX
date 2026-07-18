@@ -47,7 +47,7 @@ class LeadTable extends StatelessWidget {
                   color: Color(0xFF1B2559),
                 ),
               ),
-              TextButton(onPressed: () {}, child: const Text("View All")),
+              //TextButton(onPressed: () {}, child: const Text("View All")),
             ],
           ),
 
@@ -69,43 +69,43 @@ class LeadTable extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-
                 Expanded(
                   flex: 2,
                   child: Text(
                     "Orders",
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-
                 Expanded(
                   flex: 2,
                   child: Text(
                     "Spend",
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-
                 Expanded(
                   flex: 2,
                   child: Text(
                     "Score",
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-
                 Expanded(
                   flex: 2,
                   child: Text(
                     "Status",
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-
                 Expanded(
                   flex: 2,
                   child: Text(
                     "Action",
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -135,11 +135,7 @@ class LeadTable extends StatelessWidget {
                     final lead = leads[index];
 
                     return LeadTableRow(
-                      customer: lead.customer,
-                      orders: lead.orders.toString(),
-                      spend: "₹${lead.spend.toStringAsFixed(0)}",
-                      score: lead.score.toString(),
-                      status: lead.status,
+                      lead: lead,
                       statusColor: getStatusColor(lead.status),
                     );
                   },
