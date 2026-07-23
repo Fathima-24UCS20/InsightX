@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'lead_table_row.dart';
 import '../models/lead.dart';
-import '../services/lead_services.dart';
 
 class LeadTable extends StatelessWidget {
-  const LeadTable({super.key});
+  final List<Lead> leads;
+
+  const LeadTable({super.key, required this.leads});
 
   Color getStatusColor(String status) {
     switch (status) {
@@ -116,32 +117,27 @@ class LeadTable extends StatelessWidget {
           const SizedBox(height: 12),
 
           Expanded(
-            child: FutureBuilder<List<Lead>>(
-              future: LeadService().fetchLeads(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            child: leads.isEmpty
+                ? const Center(
+                    child: Text(
+                      "No leads found",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: leads.length,
+                    itemBuilder: (context, index) {
+                      final lead = leads[index];
 
-                if (snapshot.hasError) {
-                  return Center(child: Text(snapshot.error.toString()));
-                }
-
-                final leads = snapshot.data!;
-
-                return ListView.builder(
-                  itemCount: leads.length,
-                  itemBuilder: (context, index) {
-                    final lead = leads[index];
-
-                    return LeadTableRow(
-                      lead: lead,
-                      statusColor: getStatusColor(lead.status),
-                    );
-                  },
-                );
-              },
-            ),
+                      return LeadTableRow(
+                        lead: lead,
+                        statusColor: getStatusColor(lead.status),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -9,8 +9,35 @@ import '../models/recent_lead.dart';
 class LeadService {
   static const String baseUrl = "http://127.0.0.1:8000";
 
-  Future<List<Lead>> fetchLeads() async {
-    final response = await http.get(Uri.parse("$baseUrl/analytics/leads"));
+  Future<List<Lead>> fetchLeads({
+    String search = "",
+    String status = "",
+    String city = "",
+    String sort = "",
+  }) async {
+    final queryParams = <String, String>{};
+
+    if (search.isNotEmpty) {
+      queryParams["search"] = search;
+    }
+
+    if (status.isNotEmpty) {
+      queryParams["status"] = status;
+    }
+
+    if (city.isNotEmpty) {
+      queryParams["city"] = city;
+    }
+
+    if (sort.isNotEmpty) {
+      queryParams["sort"] = sort;
+    }
+
+    final uri = Uri.parse(
+      "$baseUrl/analytics/leads",
+    ).replace(queryParameters: queryParams);
+
+    final response = await http.get(uri);
 
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);

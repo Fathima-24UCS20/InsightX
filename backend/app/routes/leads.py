@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from fastapi import Query
+from typing import Optional
 
 from app.database import SessionLocal
 from app.services.leads_services import (
@@ -27,8 +28,20 @@ def get_db():
 
 
 @router.get("/leads")
-def get_leads(db: Session = Depends(get_db)):
-    return get_leads_data(db)
+def get_leads(
+    search: str | None = None,
+    status: str | None = None,
+    city: str | None = None,
+    sort: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return get_leads_data(
+        db,
+        search=search,
+        status_filter=status,
+        city=city,
+        sort=sort,
+    )
 
 
 @router.get("/leads/summary")

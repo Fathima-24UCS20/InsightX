@@ -4,14 +4,208 @@ import '../widgets/lead_table.dart';
 import '../widgets/lead_suggestion_card.dart';
 import '../widgets/recent_lead_card.dart';
 import '../widgets/lead_status_chart.dart';
-//import '../models/lead.dart';
+import '../models/lead.dart';
 import '../models/lead_summary.dart';
 import '../services/lead_services.dart';
 import '../models/lead_chart.dart';
 //import '../services/lead_services.dart';
 
-class LeadsPage extends StatelessWidget {
+class LeadsPage extends StatefulWidget {
   const LeadsPage({super.key});
+
+  @override
+  State<LeadsPage> createState() => _LeadsPageState();
+}
+
+class _LeadsPageState extends State<LeadsPage> {
+  final TextEditingController searchController = TextEditingController();
+
+  String selectedStatus = "";
+  String selectedSort = "";
+  String selectedCity = "";
+
+  List<Lead> leads = [];
+
+  bool isLoading = true;
+
+  Future<void> loadLeads({
+    String search = "",
+    String status = "",
+    String city = "",
+    String sort = "",
+  }) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    leads = await LeadService().fetchLeads(
+      search: search,
+      status: status,
+      city: city,
+      sort: sort,
+    );
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadLeads();
+  }
+
+  Future<void> showFilterDialog() async {
+    String tempStatus = selectedStatus;
+    String tempSort = selectedSort;
+    String tempCity = selectedCity;
+
+    final cityController = TextEditingController(text: tempCity);
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Filter Leads"),
+
+          content: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return SizedBox(
+                width: 350,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Status",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    DropdownButton<String>(
+                      value: tempStatus.isEmpty ? null : tempStatus,
+                      hint: const Text("Select Status"),
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(value: "Hot", child: Text("Hot")),
+                        DropdownMenuItem(value: "Warm", child: Text("Warm")),
+                        DropdownMenuItem(value: "Cold", child: Text("Cold")),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          tempStatus = value!;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    const Text(
+                      "City",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextField(
+                      controller: cityController,
+                      decoration: InputDecoration(
+                        hintText: "Search city...",
+                        prefixIcon: const Icon(Icons.location_city),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        tempCity = value;
+                      },
+                    ),
+                    const Text(
+                      "Sort By",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    DropdownButton<String>(
+                      value: tempSort.isEmpty ? null : tempSort,
+                      hint: const Text("Select Sort"),
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(
+                          value: "score",
+                          child: Text("Highest AI Score"),
+                        ),
+                        DropdownMenuItem(
+                          value: "spend",
+                          child: Text("Highest Spend"),
+                        ),
+                        DropdownMenuItem(
+                          value: "orders",
+                          child: Text("Most Orders"),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          tempSort = value!;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  selectedStatus = "";
+                  selectedCity = "";
+                  selectedSort = "";
+                });
+
+                Navigator.pop(context);
+
+                loadLeads(search: searchController.text);
+              },
+              child: const Text("Reset"),
+            ),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  selectedStatus = tempStatus;
+                  selectedCity = cityController.text.trim();
+                  selectedSort = tempSort;
+                });
+
+                Navigator.pop(context);
+
+                loadLeads(
+                  search: searchController.text,
+                  status: selectedStatus,
+                  city: selectedCity,
+                  sort: selectedSort,
+                );
+              },
+              child: const Text("Apply"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,36 +249,48 @@ class LeadsPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
-                    child: const Row(
-                      children: [
-                        SizedBox(width: 12),
-                        Icon(Icons.search, color: Colors.grey),
-                        SizedBox(width: 10),
-                        Text(
-                          "Search leads...",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
+                    child: TextField(
+                      controller: searchController,
+                      decoration: const InputDecoration(
+                        hintText: "Search leads...",
+                        prefixIcon: Icon(Icons.search),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+
+                      onChanged: (value) {
+                        loadLeads(
+                          search: value,
+                          status: selectedStatus,
+                          city: selectedCity,
+                          sort: selectedSort,
+                        );
+                      },
                     ),
                   ),
 
                   const SizedBox(width: 15),
 
                   // Filter Button
-                  Container(
-                    height: 45,
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.filter_list),
-                        SizedBox(width: 8),
-                        Text("Filter"),
-                      ],
+                  GestureDetector(
+                    onTap: () {
+                      showFilterDialog();
+                    },
+                    child: Container(
+                      height: 45,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.filter_list),
+                          SizedBox(width: 8),
+                          Text("Filter"),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -171,8 +377,13 @@ class LeadsPage extends StatelessWidget {
             height: 500,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Expanded(flex: 3, child: LeadTable()),
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : LeadTable(leads: leads),
+                ),
 
                 SizedBox(width: 20),
 

@@ -143,7 +143,13 @@ def generate_recommendation(
         "No strong purchasing pattern found."
     )
 
-def get_leads_data(db: Session):
+def get_leads_data(
+    db: Session,
+    search: str | None = None,
+    status_filter: str | None = None,
+    city: str | None = None,
+    sort: str | None = None,
+):
 
     preferences = get_customer_preferences(db)
 
@@ -232,6 +238,38 @@ def get_leads_data(db: Session):
                 "followup": get_followup(status),
             }
         )
+
+    if search:
+        search = search.lower()
+
+        leads = [
+            lead
+            for lead in leads
+            if search in lead["customer"].lower()
+            or search in lead["city"].lower()
+            or search in lead["status"].lower()
+        ]
+
+    if status_filter:
+        leads = [
+            lead for lead in leads
+            if lead["status"] == status_filter
+        ]
+
+    if city:
+        leads = [
+            lead for lead in leads
+            if lead["city"].lower() == city.lower()
+        ]
+
+    if sort == "score":
+        leads.sort(key=lambda x: x["score"], reverse=True)
+
+    elif sort == "spend":
+        leads.sort(key=lambda x: x["spend"], reverse=True)
+
+    elif sort == "orders":
+        leads.sort(key=lambda x: x["orders"], reverse=True)
 
     return leads
 
