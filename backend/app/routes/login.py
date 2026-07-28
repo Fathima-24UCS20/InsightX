@@ -24,7 +24,8 @@ def login(user: LoginRequest):
                 status_code=401,
                 detail="Invalid email or password"
             )
-
+        
+        
         if not verify_password(user.password, db_user.password):
             raise HTTPException(
                 status_code=401,
