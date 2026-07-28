@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
-import '../widgets/data_drop.dart';
-import '../widgets/upload_dataset.dart';
+import '../widgets/upload_db/data_drop.dart';
+import '../widgets/upload_db/upload_dataset.dart';
 import '../services/upload_services.dart';
 
 class DatasetUploadPage extends StatefulWidget {
