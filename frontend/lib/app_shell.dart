@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'screens/leads_page.dart';
 import 'widgets/side_bar.dart';
 import 'screens/dashboard_page.dart';
 import 'screens/db_upload.dart';
@@ -34,6 +34,7 @@ class _AppShellState extends State<AppShell> {
       case "Dashboard":
         return const DashboardPage();
 
+
       case "Dataset Upload":
         return const DatasetUploadPage();
 
@@ -55,9 +56,7 @@ class _AppShellState extends State<AppShell> {
         );
 
       case "Leads":
-        return const Center(
-          child: Text("Leads - Coming Soon"),
-        );
+        return const LeadsPage();
 
       case "AI Analytics":
         return const AIInsightsPage();
@@ -70,7 +69,8 @@ class _AppShellState extends State<AppShell> {
       default:
         return const Center(
           child: Text("Coming Soon"),
-        );
+        );      
+
     }
   }
 
