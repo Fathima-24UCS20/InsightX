@@ -2,16 +2,14 @@
 Dashboard analytics endpoint.
 
 Computes month-over-month KPIs from the tables that actually exist
-(customers, orders). Conversion Rate and Active Campaigns are NOT
-computable yet — there's no `leads` or `campaigns` table in models.py.
-Those two cards are returned with available=False so the frontend can
-show an honest "no data yet" instead of a made-up number.
+(customers, orders, products, order_items).
 
-TODO (to enable the last two cards):
-  - Add a `leads` table (with a `converted` boolean/status) to compute
-    conversion_rate = converted_leads / total_leads.
-  - Add a `campaigns` table (with an `is_active` boolean) to compute
-    active_campaigns = COUNT(*) WHERE is_active.
+Still NOT computable (see module-level TODOs on each endpoint) because
+there's no `leads`, `campaigns`, or review/social-text table:
+  - Conversion Rate, New Leads      -> needs a `leads` table
+  - Active Campaigns / Campaign list -> needs a `campaigns` table
+  - Sentiment / Topics of Interest   -> needs review/social text + NLP
+  - Audience by age                  -> needs age/DOB on customers
 """
 
 from fastapi import APIRouter
@@ -120,7 +118,93 @@ def dashboard_stats():
             _pct_change(cust_current_month_total, cust_previous_month_total),
         ),
         "avg_order_value": _card(aov_value, _pct_change(aov_value, prev_aov)),
-        # Not computable yet — see module docstring TODO.
+        # Not computable yet — no leads/campaigns table.
         "conversion_rate": _card(None, None, available=False),
         "active_campaigns": _card(None, None, available=False),
     }
+
+
+@router.get("/top-products")
+def top_products(limit: int = 5):
+    """
+    Top products by revenue, computed from order_items x products.
+    Real data — replaces the dummy Top Products widget.
+    """
+    query = text(
+        """
+        SELECT p.p_id,
+               p.p_name,
+               p.category,
+               p.brand,
+               SUM(oi.quantity * oi.unit_price) AS revenue,
+               SUM(oi.quantity) AS units_sold
+        FROM order_items oi
+        JOIN products p ON p.p_id = oi.p_id
+        GROUP BY p.p_id, p.p_name, p.category, p.brand
+        ORDER BY revenue DESC
+        LIMIT :limit
+        """
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"limit": limit}).mappings().all()
+
+    return {
+        "products": [
+            {
+                "p_id": r["p_id"],
+                "name": r["p_name"],
+                "category": r["category"],
+                "brand": r["brand"],
+                "revenue": float(r["revenue"] or 0),
+                "units_sold": int(r["units_sold"] or 0),
+            }
+            for r in rows
+        ]
+    }
+
+
+@router.get("/customer-distribution")
+def customer_distribution(top_n: int = 5):
+    """
+    Real customer geographic distribution by city (customers.city).
+    NOTE: this is distribution by CITY, not by age — there's no age/DOB
+    column on customers, so an age-based breakdown (like the current
+    AudienceDonutCard demo data) isn't computable yet.
+    """
+    query = text(
+        """
+        SELECT city, COUNT(*) AS customer_count
+        FROM customers
+        WHERE city IS NOT NULL
+        GROUP BY city
+        ORDER BY customer_count DESC
+        """
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(query).mappings().all()
+
+    total = sum(int(r["customer_count"] or 0) for r in rows)
+    if total == 0:
+        return {"total_customers": 0, "segments": []}
+
+    top_rows = rows[:top_n]
+    other_count = sum(int(r["customer_count"] or 0) for r in rows[top_n:])
+
+    segments = [
+        {
+            "label": r["city"],
+            "count": int(r["customer_count"] or 0),
+            "percent": round(int(r["customer_count"] or 0) / total * 100, 1),
+        }
+        for r in top_rows
+    ]
+    if other_count:
+        segments.append(
+            {
+                "label": "Other",
+                "count": other_count,
+                "percent": round(other_count / total * 100, 1),
+            }
+        )
+
+    return {"total_customers": total, "segments": segments}

@@ -1,22 +1,15 @@
-/// One KPI value returned by GET /analytics/dashboard.
-///
-/// `available` is false for metrics that can't be computed yet (e.g.
-/// Conversion Rate, Active Campaigns) because the backend has no
-/// leads/campaigns tables. The UI should show "No data yet" in that case
-/// rather than a fabricated number.
-class KpiValue {
+/// Mirrors the `_card()` shape returned by every KPI field in
+/// GET /analytics/dashboard: { value, change_pct, available }.
+class KpiStat {
   final num? value;
   final double? changePct;
   final bool available;
 
-  const KpiValue({
-    required this.value,
-    required this.changePct,
-    required this.available,
-  });
+  const KpiStat({this.value, this.changePct, this.available = true});
 
-  factory KpiValue.fromJson(Map<String, dynamic> json) {
-    return KpiValue(
+  factory KpiStat.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const KpiStat(available: false);
+    return KpiStat(
       value: json['value'] as num?,
       changePct: (json['change_pct'] as num?)?.toDouble(),
       available: json['available'] as bool? ?? true,
@@ -24,13 +17,14 @@ class KpiValue {
   }
 }
 
+/// Mirrors the full JSON body of GET /analytics/dashboard.
 class DashboardStats {
-  final KpiValue totalRevenue;
-  final KpiValue totalOrders;
-  final KpiValue totalCustomers;
-  final KpiValue avgOrderValue;
-  final KpiValue conversionRate;
-  final KpiValue activeCampaigns;
+  final KpiStat totalRevenue;
+  final KpiStat totalOrders;
+  final KpiStat totalCustomers;
+  final KpiStat avgOrderValue;
+  final KpiStat conversionRate;
+  final KpiStat activeCampaigns;
 
   const DashboardStats({
     required this.totalRevenue,
@@ -43,12 +37,12 @@ class DashboardStats {
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
-      totalRevenue: KpiValue.fromJson(json['total_revenue']),
-      totalOrders: KpiValue.fromJson(json['total_orders']),
-      totalCustomers: KpiValue.fromJson(json['total_customers']),
-      avgOrderValue: KpiValue.fromJson(json['avg_order_value']),
-      conversionRate: KpiValue.fromJson(json['conversion_rate']),
-      activeCampaigns: KpiValue.fromJson(json['active_campaigns']),
+      totalRevenue: KpiStat.fromJson(json['total_revenue']),
+      totalOrders: KpiStat.fromJson(json['total_orders']),
+      totalCustomers: KpiStat.fromJson(json['total_customers']),
+      avgOrderValue: KpiStat.fromJson(json['avg_order_value']),
+      conversionRate: KpiStat.fromJson(json['conversion_rate']),
+      activeCampaigns: KpiStat.fromJson(json['active_campaigns']),
     );
   }
 }

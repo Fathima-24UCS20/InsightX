@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/dashboard_stats.dart';
 import '../services/analytics_services.dart';
-import '../widgets/kpi_card.dart';
-import '../widgets/dashboard_panel.dart';
+import '../widgets/dashboard/kpi_card.dart'; 
+import '../widgets/dashboard/dashboard_panel.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
