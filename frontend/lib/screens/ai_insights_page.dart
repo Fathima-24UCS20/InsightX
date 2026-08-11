@@ -5,7 +5,7 @@ import '../widgets/ai_insights/revenue_trend_chart.dart';
 import '../widgets/campaign_list_card.dart';
 import '../widgets/ai_insights/audience_card.dart';
 import '../widgets/ai_insights/customer_distribuition.dart';
-import '../widgets/ai_insights/sentiment_gauge_card.dart'; 
+import '../widgets/ai_insights/sentiment_gauge_card.dart';
 import '../widgets/ai_insights/top_product.dart'; // NEW — real data
 import '../widgets/ai_insights/topic_intrest.dart';
 import '../widgets/recomendation.dart';
@@ -64,7 +64,11 @@ class AIInsightsPage extends StatelessWidget {
           children: const [
             Text(
               "AI Insights",
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF1B2559)),
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B2559),
+              ),
             ),
             SizedBox(height: 6),
             Text(
@@ -173,7 +177,10 @@ class AIInsightsPage extends StatelessWidget {
             flex: 2,
             child: Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
               child: const SizedBox(
                 height: 320,
                 // Already wired to real revenue-per-month data via analytics.py
@@ -181,10 +188,10 @@ class AIInsightsPage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 20),    
+          const SizedBox(width: 20),
           const Expanded(child: CampaignListCard()),
           const SizedBox(width: 20),
-          
+
           const Expanded(child: AudienceDonutCard()),
         ],
       ),
@@ -199,7 +206,9 @@ class AIInsightsPage extends StatelessWidget {
         children: [
           Expanded(child: TopProductsCard()), // real: order_items x products
           SizedBox(width: 20),
-          Expanded(child: CustomerCityDistributionCard()), // real: customers.city
+          Expanded(
+            child: CustomerCityDistributionCard(),
+          ), // real: customers.city
         ],
       ),
     );
