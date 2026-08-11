@@ -62,17 +62,22 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.green,
           ),
         );
-
-        // Navigate to Dashboard
         final role = data["user"]["role"].toString().toLowerCase();
 
-        print("Role: $role");
+print("Role: $role");
+
+        // Navigate to Dashboard
+        Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => AppShell(
+      role: role,
+    ),
+  ),
+);
 
         // For now, every authenticated user goes to the same dashboard.
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AppShell()),
-        );
+        
       } else {
         final error = jsonDecode(response.body);
 

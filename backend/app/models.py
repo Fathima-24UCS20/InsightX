@@ -10,13 +10,46 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
-
+from sqlalchemy import JSON
 Base = declarative_base()
 
 # -------------------------
 # User Model (Authentication)
 # -------------------------
+class Campaign(Base):
+    __tablename__ = "campaigns"
 
+    campaign_id = Column(Integer, primary_key=True, index=True)   # was: id
+
+    campaign_name = Column(String, nullable=False)                # was: name
+
+    objective = Column(String, nullable=False)
+    goal = Column(String, nullable=False)
+
+    product_id = Column(String)
+    product_label = Column(String)
+
+    target_segment = Column(JSON)
+    channels = Column(JSON, nullable=True)
+
+    tone = Column(String)
+    additional_info = Column(String)
+
+    budget = Column(Numeric)
+    discount = Column(Float)
+
+    start_date = Column(Date)
+    end_date = Column(Date)
+
+    generated_copy = Column(JSON)
+
+    status = Column(String, default="draft")
+
+    revenue = Column(Numeric)
+    change_pct = Column(Float)
+
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
 class User(Base):
     __tablename__ = "users"
 
@@ -50,7 +83,7 @@ class Customer(Base):
 class Product(Base):
     __tablename__ = "products"
 
-    p_id = Column(Integer, primary_key=True)
+    p_id = Column(String, primary_key=True)
     p_name = Column(String)
     category = Column(String)
     brand = Column(String)
@@ -96,10 +129,10 @@ class OrderItem(Base):
     )
 
     p_id = Column(
-        Integer,
-        ForeignKey("products.p_id"),
-        nullable=True,
-    )
+    String,
+    ForeignKey("products.p_id"),
+    nullable=True,
+)
 
     quantity = Column(Integer)
     unit_price = Column(Numeric)
