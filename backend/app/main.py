@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Login router
@@ -18,6 +19,7 @@ from app.database import init_db
 from app.routes.product import router as product_router
 from app.routes.customer import router as customer_router
 from app.routes.campaign import router as campaign_router
+from app.routes.social_post import router as social_post_router
 
 app = FastAPI()
 
@@ -38,6 +40,7 @@ app.include_router(leads.router)
 app.include_router(customer_router)
 app.include_router(product_router)
 app.include_router(campaign_router)
+app.include_router(social_post_router)
 @app.on_event("startup")
 def on_startup():
     init_db()

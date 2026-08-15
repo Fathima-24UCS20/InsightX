@@ -93,7 +93,7 @@ class AppSidebar extends StatelessWidget {
     ),
     SidebarItem(
       icon: Icons.settings_rounded,
-      label: "Settings",
+      label: "Reports",
       roles: ["admin"],
     ),
   ];

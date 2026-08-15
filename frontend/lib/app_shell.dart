@@ -6,6 +6,7 @@ import 'screens/db_upload.dart';
 import 'screens/ai_insights_page.dart';
 import 'screens/campaign_generator_page.dart';
 import 'services/campaign_services.dart';
+import 'screens/post_generator_page.dart';
 class AppShell extends StatefulWidget {
   final String role;
 
@@ -51,9 +52,7 @@ class _AppShellState extends State<AppShell> {
         );
 
       case "Social Media":
-        return const Center(
-          child: Text("Social Media - Coming Soon"),
-        );
+        return const PostGeneratorPage();
 
       case "Leads":
         return const LeadsPage();

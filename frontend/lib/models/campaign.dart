@@ -175,6 +175,7 @@ final AudienceFilter audience;
 final List<CampaignChannel> channels;
 final String tone;
 final String? additionalInfo;
+final String? postTime;
 
 final double? budget;
 final double? discount;
@@ -198,6 +199,7 @@ final GeneratedCampaignContent? generated;
   required this.channels,
   required this.tone,
   this.additionalInfo,
+  this.postTime,
   this.budget,
   this.discount,
   this.startDate,
@@ -234,6 +236,7 @@ final GeneratedCampaignContent? generated;
     .toList(),
     tone: json['tone'] as String? ?? 'Professional',
     additionalInfo: json['additional_info'] as String?,
+    postTime: json['post_time'] as String?,
     budget: (json['budget'] as num?)?.toDouble(),
     discount: (json['discount'] as num?)?.toDouble(),
     startDate: json['start_date'] != null
@@ -273,6 +276,7 @@ final GeneratedCampaignContent? generated;
     'channels': channels.map((c) => c.key).toList(),
     'tone': tone,
     'additional_info': additionalInfo,
+    'post_time': postTime,
     'budget': budget,
     'discount': discount,
     'start_date': startDate?.toIso8601String(),

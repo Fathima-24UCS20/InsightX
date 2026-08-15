@@ -1,0 +1,2076 @@
+import 'package:flutter/material.dart';
+import '../models/campaign.dart';
+import '../services/campaign_services.dart';
+import '../models/social_post.dart';
+import '../services/socialpost_services.dart';
+
+class PostGeneratorPage extends StatefulWidget {
+  const PostGeneratorPage({super.key});
+
+  @override
+  State<PostGeneratorPage> createState() => _PostGeneratorPageState();
+}
+
+class _PostGeneratorPageState extends State<PostGeneratorPage> {
+  int selectedDay = 0;
+int selectedPlatform = 0;
+
+Campaign? selectedCampaign;
+
+bool isLoadingCampaign = true;
+String? campaignError;
+
+late CampaignService campaignService;
+late SocialPostService socialPostService;
+
+SocialPost? generatedPost;
+
+bool isGeneratingPost = false;
+String? postGenerationError;
+
+@override
+void initState() {
+  super.initState();
+
+  campaignService = CampaignService(
+    baseUrl: 'http://127.0.0.1:8000',
+  );
+
+  socialPostService = SocialPostService(
+    baseUrl: 'http://127.0.0.1:8000',
+  );
+
+  _loadCampaign();
+}
+
+Future<void> _loadCampaign() async {
+  try {
+    setState(() {
+      isLoadingCampaign = true;
+      campaignError = null;
+    });
+
+    final campaigns = await campaignService.fetchSavedCampaigns();
+
+    if (!mounted) return;
+
+    if (campaigns.isEmpty) {
+      setState(() {
+        isLoadingCampaign = false;
+        campaignError = 'No saved campaigns found.';
+      });
+      return;
+    }
+
+    setState(() {
+      selectedCampaign = campaigns.first;
+      isLoadingCampaign = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingCampaign = false;
+      campaignError = e.toString();
+    });
+  }
+}
+
+Future<void> _generatePost() async {
+  if (selectedCampaign == null ||
+      selectedCampaign!.id == null) {
+    return;
+  }
+
+  if (selectedCampaign!.channels.isEmpty) {
+    setState(() {
+      postGenerationError = 'No platform selected for this campaign.';
+    });
+    return;
+  }
+
+  if (selectedPlatform >= selectedCampaign!.channels.length) {
+    setState(() {
+      postGenerationError = 'Invalid platform selected.';
+    });
+    return;
+  }
+
+  setState(() {
+    isGeneratingPost = true;
+    postGenerationError = null;
+  });
+
+  try {
+    final post = await socialPostService.generatePost(
+      campaignId: selectedCampaign!.id!,
+      dayNumber: selectedDay + 1,
+      platform: selectedCampaign!
+          .channels[selectedPlatform]
+          .key,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      generatedPost = post;
+      isGeneratingPost = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      isGeneratingPost = false;
+      postGenerationError = e.toString();
+    });
+  }
+}
+
+int get _campaignDays {
+  if (selectedCampaign == null ||
+      selectedCampaign!.startDate == null ||
+      selectedCampaign!.endDate == null) {
+    return 0;
+  }
+
+  return selectedCampaign!.endDate!
+          .difference(selectedCampaign!.startDate!)
+          .inDays +
+      1;
+}
+
+Future<void> _showSavedCampaigns() async {
+  try {
+    setState(() {
+      isLoadingCampaign = true;
+      campaignError = null;
+    });
+
+    final campaigns =
+        await campaignService.fetchSavedCampaigns();
+
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingCampaign = false;
+    });
+
+    if (campaigns.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No saved campaigns found.'),
+        ),
+      );
+      return;
+    }
+
+    final Campaign? selected = await showDialog<Campaign>(
+      context: context,
+      builder: (dialogContext) {
+        return _SavedCampaignsDialog(
+          campaigns: campaigns,
+        );
+      },
+    );
+
+    if (selected == null || !mounted) return;
+
+    setState(() {
+      selectedCampaign = selected;
+
+      // Reset selections for the newly selected campaign.
+      selectedDay = 0;
+      selectedPlatform = 0;
+
+      generatedPost = null;
+      postGenerationError = null;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingCampaign = false;
+      campaignError = e.toString();
+    });
+  }
+}
+
+// ----------------------------------------------------------
+// CAMPAIGN DAYS
+// ----------------------------------------------------------
+
+List<String> get campaignDays {
+  final campaign = selectedCampaign;
+
+  if (campaign == null ||
+      campaign.startDate == null ||
+      campaign.endDate == null) {
+    return [];
+  }
+
+  final totalDays =
+      campaign.endDate!.difference(
+        campaign.startDate!,
+      ).inDays +
+      1;
+
+  return List.generate(
+    totalDays,
+    (index) => 'Day ${index + 1}',
+  );
+}
+
+// ----------------------------------------------------------
+// DATE HELPERS
+// ----------------------------------------------------------
+
+String _getDayDate(int index) {
+  final campaign = selectedCampaign!;
+
+  if (campaign.startDate == null) {
+    return '';
+  }
+
+  final date = campaign.startDate!.add(
+    Duration(days: index),
+  );
+
+  return _formatShortDate(date);
+}
+
+String _formatShortDate(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  return '${date.day} ${months[date.month - 1]}';
+}
+
+String _formatDate(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  return '${date.day} ${months[date.month - 1]} ${date.year}';
+}
+
+// ----------------------------------------------------------
+// CAMPAIGN DETAILS
+// ----------------------------------------------------------
+
+String _campaignDuration() {
+  final campaign = selectedCampaign!;
+
+  if (campaign.startDate == null ||
+      campaign.endDate == null) {
+    return 'Not specified';
+  }
+
+  final totalDays =
+      campaign.endDate!.difference(
+        campaign.startDate!,
+      ).inDays +
+      1;
+
+  return '$totalDays Days';
+}
+
+String _campaignDateRange() {
+  final campaign = selectedCampaign!;
+
+  if (campaign.startDate == null ||
+      campaign.endDate == null) {
+    return 'Dates not specified';
+  }
+
+  return '${_formatDate(campaign.startDate!)} – '
+      '${_formatDate(campaign.endDate!)}';
+}
+
+// ----------------------------------------------------------
+// PLATFORMS
+// ----------------------------------------------------------
+
+String _platformNames() {
+  final campaign = selectedCampaign!;
+
+  if (campaign.channels.isEmpty) {
+    return 'No platforms selected';
+  }
+
+  return campaign.channels
+      .map((channel) => channel.label)
+      .join(' • ');
+}
+
+String _platformCount() {
+  final count = selectedCampaign!.channels.length;
+
+  return '$count ${count == 1 ? 'Platform' : 'Platforms'}';
+}
+  
+@override
+Widget build(BuildContext context) {
+  final screenWidth = MediaQuery.of(context).size.width;
+
+  return Scaffold(
+    backgroundColor: const Color(0xFFF7F7FB),
+    body: SafeArea(
+      child: isLoadingCampaign
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : campaignError != null
+              ? _buildCampaignError()
+              : SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth < 900 ? 16 : 28,
+                    vertical: 24,
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+
+                      const SizedBox(height: 26),
+
+                      _buildCampaignSummary(),
+
+                      const SizedBox(height: 20),
+
+                      _buildCampaignDetails(),
+
+                      const SizedBox(height: 24),
+
+                      _buildContentPlan(),
+                    ],
+                  ),
+                ),
+    ),
+  );
+}
+
+Widget _buildCampaignError() {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(30),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            size: 50,
+            color: Colors.redAccent,
+          ),
+
+          const SizedBox(height: 15),
+
+          const Text(
+            'Unable to load campaign',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            campaignError ?? 'Unknown error',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF667085),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          ElevatedButton(
+            onPressed: _loadCampaign,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+  // ----------------------------------------------------------
+  // HEADER
+  // ----------------------------------------------------------
+
+  Widget _buildHeader() {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final isSmall = constraints.maxWidth < 750;
+
+      final titleSection = const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Social Media Generator',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF101828),
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Generate and manage unique social media posts for your campaign.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF667085),
+            ),
+          ),
+        ],
+      );
+
+      final button = OutlinedButton.icon(
+  onPressed: _showSavedCampaigns,
+  icon: const Icon(
+    Icons.folder_open_outlined,
+  ),
+  label: const Text(
+    'View Saved Campaigns',
+  ),
+  style: OutlinedButton.styleFrom(
+    foregroundColor: const Color(0xFF4F21FF),
+    side: const BorderSide(
+      color: Color(0xFF4F21FF),
+    ),
+    padding: const EdgeInsets.symmetric(
+      horizontal: 18,
+      vertical: 14,
+    ),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    ),
+  ),
+);
+      if (isSmall) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            titleSection,
+            const SizedBox(height: 16),
+            button,
+          ],
+        );
+      }
+
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: titleSection,
+          ),
+
+          const SizedBox(width: 20),
+
+          button,
+        ],
+      );
+    },
+  );
+}
+
+  // ----------------------------------------------------------
+  // CAMPAIGN SUMMARY
+  // ----------------------------------------------------------
+
+  Widget _buildCampaignSummary() {
+ 
+  return _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Campaign Summary',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF4520FF),
+          ),
+        ),
+
+        const SizedBox(height: 4),
+
+        const Text(
+          'Auto-loaded from the selected campaign',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF667085),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+
+            int columns;
+
+            if (width > 1100) {
+              columns = 5;
+            } else if (width > 750) {
+              columns = 3;
+            } else {
+              columns = 1;
+            }
+
+            final itemWidth =
+                (width - ((columns - 1) * 16)) / columns;
+
+            return Wrap(
+              spacing: 16,
+              runSpacing: 18,
+              children: [
+                SizedBox(
+                  width: itemWidth,
+                  child: _summaryItem(
+                    icon: Icons.campaign_outlined,
+                    title: 'Campaign',
+                    value: selectedCampaign!.name,
+                  ),
+                ),
+
+                SizedBox(
+                  width: itemWidth,
+                  child: _summaryItem(
+                    icon: Icons.trending_up,
+                    title: 'Goal',
+                    value: selectedCampaign!.goal.label,
+                  ),
+                ),
+
+                SizedBox(
+                  width: itemWidth,
+                  child: _summaryItem(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Product / Service',
+                    value: selectedCampaign!.productLabel,
+                  ),
+                ),
+
+                SizedBox(
+                  width: itemWidth,
+                  child: _summaryItem(
+                    icon: Icons.people_outline,
+                    title: 'Audience',
+                    value: selectedCampaign!.audience.toDescription(),
+                  ),
+                ),
+
+                SizedBox(
+                  width: itemWidth,
+                  child: _summaryItem(
+                    icon: Icons.record_voice_over_outlined,
+                    title: 'Tone of Voice',
+                    value: selectedCampaign!.tone,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _summaryItem({
+  required IconData icon,
+  required String title,
+  required String value,
+}) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(
+        icon,
+        color: const Color(0xFF4F21FF),
+        size: 25,
+      ),
+
+      const SizedBox(width: 10),
+
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF667085),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+
+            const SizedBox(height: 7),
+
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF101828),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+  
+
+ // ----------------------------------------------------------
+// CAMPAIGN DETAILS
+// ----------------------------------------------------------
+
+Widget _buildCampaignDetails() {
+  final campaign = selectedCampaign;
+
+  if (campaign == null) {
+    return const SizedBox.shrink();
+  }
+
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final width = constraints.maxWidth;
+
+      int columns;
+
+      if (width > 1100) {
+        columns = 4;
+      } else if (width > 700) {
+        columns = 2;
+      } else {
+        columns = 1;
+      }
+
+      final cardWidth =
+          (width - ((columns - 1) * 14)) / columns;
+
+      return Wrap(
+        spacing: 14,
+        runSpacing: 14,
+        children: [
+          SizedBox(
+            width: cardWidth,
+            child: _infoCard(
+              icon: Icons.calendar_month_outlined,
+              title: 'Campaign Duration',
+              value: _campaignDuration(),
+              subtitle: _campaignDateRange(),
+            ),
+          ),
+
+          SizedBox(
+            width: cardWidth,
+            child: _infoCard(
+              icon: Icons.language_outlined,
+              title: 'Total Platforms',
+              value: _platformCount(),
+              subtitle: _platformNames(),
+            ),
+          ),
+
+          SizedBox(
+            width: cardWidth,
+            child: _infoCard(
+  icon: Icons.schedule_outlined,
+  title: 'Scheduling',
+  value: 'Not scheduled',
+  subtitle: 'Set time during scheduling',
+),
+          ),
+
+          /*SizedBox(
+            width: cardWidth,
+            child: _infoCard(
+              icon: Icons.info_outline,
+              title: 'Additional Info',
+              value: campaign.additionalInfo.isEmpty
+                  ? '—'
+                  : campaign.additionalInfo,
+              subtitle: campaign.additionalInfo.isEmpty
+                  ? 'No additional instructions'
+                  : 'Campaign instructions',
+            ),
+          ),*/
+        ],
+      );
+    },
+  );
+}
+
+Widget _infoCard({
+  required IconData icon,
+  required String title,
+  required String value,
+  required String subtitle,
+}) {
+  return _card(
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0EDFF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 21,
+            color: const Color(0xFF4F21FF),
+          ),
+        ),
+
+        const SizedBox(width: 11),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF667085),
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF101828),
+                ),
+              ),
+
+              const SizedBox(height: 5),
+
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF667085),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+// ----------------------------------------------------------
+// CONTENT PLAN
+// ----------------------------------------------------------
+
+Widget _buildContentPlan() {
+  final campaign = selectedCampaign;
+
+  if (campaign == null || campaignDays.isEmpty) {
+    return _card(
+      child: const Center(
+        child: Padding(
+          padding: EdgeInsets.all(30),
+          child: Text(
+            'No campaign content plan available.',
+            style: TextStyle(
+              color: Color(0xFF667085),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  return _card(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${campaignDays.length}-Day Content Plan',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF101828),
+          ),
+        ),
+
+        const SizedBox(height: 5),
+
+        const Text(
+          'Generate and manage unique posts for each selected platform.',
+          style: TextStyle(
+            fontSize: 13,
+            color: Color(0xFF667085),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        _buildDaySelector(),
+
+        const SizedBox(height: 20),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 850) {
+              return Column(
+                children: [
+                  _buildDayList(),
+
+                  const SizedBox(height: 20),
+
+                  _buildPostPreview(),
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 300,
+                  child: _buildDayList(),
+                ),
+
+                const SizedBox(width: 18),
+
+                Expanded(
+                  child: _buildPostPreview(),
+                ),
+              ],
+            );
+          },
+        ),
+
+        const SizedBox(height: 22),
+
+        Center(
+          child: ElevatedButton.icon(
+            onPressed: _regenerateAllPosts,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Regenerate All Posts'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4F21FF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 30,
+                vertical: 15,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+// ----------------------------------------------------------
+// REGENERATE POSTS
+// ----------------------------------------------------------
+
+int _generationVersion = 0;
+
+void _regenerateAllPosts() {
+  setState(() {
+    _generationVersion++;
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Posts regenerated successfully.',
+      ),
+      duration: Duration(seconds: 2),
+    ),
+  );
+}
+
+
+// ----------------------------------------------------------
+// DAY SELECTOR
+// ----------------------------------------------------------
+
+Widget _buildDaySelector() {
+  if (selectedCampaign == null || _campaignDays == 0) {
+    return const SizedBox.shrink();
+  }
+
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: List.generate(
+        _campaignDays,
+        (index) {
+          final bool selected = selectedDay == index;
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedDay = index;
+                generatedPost = null;
+                postGenerationError = null;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 115,
+              margin: EdgeInsets.only(
+                right: index == _campaignDays - 1 ? 0 : 8,
+              ),
+              padding: const EdgeInsets.symmetric(
+                vertical: 13,
+              ),
+              decoration: BoxDecoration(
+                color: selected
+                    ? const Color(0xFF4F21FF)
+                    : Colors.white,
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xFF4F21FF)
+                      : const Color(0xFFE4E7EC),
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Day ${index + 1}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: selected
+                          ? Colors.white
+                          : const Color(0xFF101828),
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    _getDayDate(index),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: selected
+                          ? Colors.white
+                          : const Color(0xFF667085),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+}
+
+// ----------------------------------------------------------
+// DAY LIST
+// ----------------------------------------------------------
+
+Widget _buildDayList() {
+  if (campaignDays.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Content Plan',
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 12),
+
+      ...List.generate(
+        campaignDays.length,
+        (index) => _buildDayItem(index),
+      ),
+
+      const SizedBox(height: 8),
+
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1EEFF),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              size: 18,
+              color: Color(0xFF4F21FF),
+            ),
+
+            SizedBox(width: 9),
+
+            Expanded(
+              child: Text(
+                'Posts are prepared for the selected campaign platforms.',
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.4,
+                  color: Color(0xFF4520FF),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+// ----------------------------------------------------------
+// DAY ITEM
+// ----------------------------------------------------------
+
+Widget _buildDayItem(int index) {
+  final bool selected = selectedDay == index;
+
+  return GestureDetector(
+    onTap: () {
+      setState(() {
+        selectedDay = index;
+        generatedPost = null;
+        postGenerationError = null;
+      });
+    },
+    child: Container(
+      margin: const EdgeInsets.only(
+        bottom: 9,
+      ),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: selected
+            ? const Color(0xFFF6F3FF)
+            : Colors.white,
+        border: Border.all(
+          color: selected
+              ? const Color(0xFF6C3BFF)
+              : const Color(0xFFE4E7EC),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 15,
+            backgroundColor: selected
+                ? const Color(0xFF4F21FF)
+                : const Color(0xFF344054),
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Day ${index + 1}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  _getDayTheme(index),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF667085),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 7,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: generatedPost != null &&
+                      selected
+                  ? const Color(0xFFE7F8EF)
+                  : const Color(0xFFF2F4F7),
+              borderRadius:
+                  BorderRadius.circular(20),
+            ),
+            child: Text(
+              generatedPost != null && selected
+                  ? 'Ready'
+                  : 'Not Generated',
+              style: TextStyle(
+                fontSize: 9,
+                color: generatedPost != null &&
+                        selected
+                    ? const Color(0xFF16834A)
+                    : const Color(0xFF667085),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
+// ----------------------------------------------------------
+// DYNAMIC DAY THEME
+// ----------------------------------------------------------
+
+String _getDayTheme(int index) {
+  final themes = [
+    'Campaign Introduction',
+    'Product / Service Highlight',
+    'Benefits & Value',
+    'Customer Engagement',
+    'Call to Action',
+    'Social Proof',
+    'Final Campaign Push',
+  ];
+
+  return themes[index % themes.length];
+}
+
+
+// ----------------------------------------------------------
+// PLATFORM DATA
+// ----------------------------------------------------------
+
+List<String> get _availablePlatforms {
+  final campaign = selectedCampaign;
+
+  if (campaign == null) {
+    return [];
+  }
+
+  return campaign.channels
+      .map((channel) => channel.label)
+      .where((label) => label.trim().isNotEmpty)
+      .toList();
+}
+
+
+// ----------------------------------------------------------
+// POST PREVIEW
+// ----------------------------------------------------------
+
+Widget _buildPostPreview() {
+  if (campaignDays.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  final platforms = _availablePlatforms;
+
+  if (platforms.isEmpty) {
+    return _card(
+      child: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text(
+          'No social media platforms were selected for this campaign.',
+          style: TextStyle(
+            color: Color(0xFF667085),
+          ),
+        ),
+      ),
+    );
+  }
+
+  if (selectedDay >= campaignDays.length) {
+    selectedDay = 0;
+  }
+
+  if (selectedPlatform >= platforms.length) {
+    selectedPlatform = 0;
+  }
+
+  final platform = platforms[selectedPlatform];
+
+  return Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(
+        color: const Color(0xFFE4E7EC),
+      ),
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${campaignDays[selectedDay]} – '
+          '${_getDayTheme(selectedDay)}',
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 5),
+
+        Text(
+          'Your $platform post for '
+          '${_getDayDate(selectedDay)} ',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF667085),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        _buildPlatformSelector(),
+
+        const SizedBox(height: 16),
+
+        _buildGenerateButton(),
+
+        const SizedBox(height: 16),
+
+        _buildPostMockup(),
+
+const SizedBox(height: 18),
+
+_buildPostDetails(),
+      ],
+    ),
+  );
+}
+Widget _buildGenerateButton() {
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton.icon(
+      onPressed: isGeneratingPost ? null : _generatePost,
+      icon: isGeneratingPost
+          ? const SizedBox(
+              width: 17,
+              height: 17,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(
+              Icons.auto_awesome,
+              size: 18,
+            ),
+      label: Text(
+        isGeneratingPost
+            ? 'Generating Post...'
+            : 'Generate Post',
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF4F21FF),
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFF9B8AFB),
+        disabledForegroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(
+          vertical: 13,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(7),
+        ),
+      ),
+    ),
+  );
+}
+
+// ----------------------------------------------------------
+// PLATFORM SELECTOR
+// ----------------------------------------------------------
+
+Widget _buildPlatformSelector() {
+  final platforms = _availablePlatforms;
+
+  if (platforms.isEmpty) {
+    return const Text(
+      'No platforms selected for this campaign.',
+      style: TextStyle(
+        fontSize: 12,
+        color: Color(0xFF667085),
+      ),
+    );
+  }
+
+  return Row(
+    children: List.generate(
+      platforms.length,
+      (index) {
+        final bool selected =
+            selectedPlatform == index;
+
+        return Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedPlatform = index;
+                generatedPost = null;
+                postGenerationError = null;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                vertical: 11,
+              ),
+              decoration: BoxDecoration(
+                color: selected
+                    ? const Color(0xFF4F21FF)
+                    : Colors.white,
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xFF4F21FF)
+                      : const Color(0xFFE4E7EC),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _platformIcon(
+                      platforms[index],
+                    ),
+                    size: 17,
+                    color: selected
+                        ? Colors.white
+                        : const Color(0xFF4F21FF),
+                  ),
+
+                  const SizedBox(width: 6),
+
+                  Flexible(
+                    child: Text(
+                      platforms[index],
+                      overflow:
+                          TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight:
+                            FontWeight.w600,
+                        color: selected
+                            ? Colors.white
+                            : const Color(
+                                0xFF101828,
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+IconData _platformIcon(String platform) {
+  switch (platform.toLowerCase()) {
+    case 'instagram':
+      return Icons.camera_alt_outlined;
+
+    case 'facebook':
+      return Icons.facebook;
+
+    case 'linkedin':
+      return Icons.business_center_outlined;
+
+    case 'twitter':
+    case 'x':
+      return Icons.alternate_email;
+
+    case 'youtube':
+      return Icons.play_circle_outline;
+
+    default:
+      return Icons.public;
+  }
+}
+
+/*
+// ----------------------------------------------------------
+// GENERATED POST CONTENT
+// ----------------------------------------------------------
+
+String _generatedHeadline() {
+  final campaign = selectedCampaign!;
+
+  final product = campaign.productLabel.isEmpty
+      ? 'our product'
+      : campaign.productLabel;
+
+  final headlines = [
+    'Discover $product',
+    'Experience the Difference',
+    'Why Choose $product?',
+    'Something Better Is Here',
+    'Make Your Next Choice Count',
+  ];
+
+  return headlines[
+      (_generationVersion + selectedDay) %
+          headlines.length];
+}
+
+String _generatedBody() {
+  final campaign = selectedCampaign!;
+
+  final product = campaign.productLabel.isEmpty
+      ? 'our product'
+      : campaign.productLabel;
+
+  final audience =
+      campaign.audience.toDescription();
+
+  final tone = campaign.tone.isEmpty
+      ? 'engaging'
+      : campaign.tone;
+
+  return 'Discover $product with a $tone message '
+      'created for $audience. '
+      'Explore the value, benefits, and experience '
+      'that make this campaign worth noticing.';
+}
+
+List<String> _generatedFeatures() {
+  return [
+    'Quality',
+    'Value',
+    'Easy to Use',
+  ];
+}
+*/
+
+
+// ----------------------------------------------------------
+// POST MOCKUP
+// ----------------------------------------------------------
+
+Widget _buildPostMockup() {
+  final platforms = _availablePlatforms;
+
+  final platform = platforms.isEmpty
+      ? 'Social Media'
+      : platforms[selectedPlatform];
+
+  final bool hasGeneratedPost = generatedPost != null;
+
+  final String postTime =
+      selectedCampaign?.postTime ?? 'Not specified';
+
+  return Container(
+    constraints: const BoxConstraints(
+      minHeight: 350,
+    ),
+    width: double.infinity,
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [
+          Color(0xFF32166D),
+          Color(0xFF13062A),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Stack(
+      children: [
+        Positioned(
+          right: 25,
+          top: 25,
+          child: Icon(
+            _platformIcon(platform),
+            size: 180,
+            color: Colors.white.withOpacity(0.10),
+          ),
+        ),
+
+        Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      color: Color(0xFF4F21FF),
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  Expanded(
+                    child: Text(
+                      'InsightX • $platform',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 25),
+
+              // POST DATE + TIME
+              Text(
+                '${_getDayDate(selectedDay)} • $postTime',
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 11,
+                ),
+              ),
+
+              const SizedBox(height: 25),
+
+              if (!hasGeneratedPost)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 60,
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 40,
+                          color: Colors.white70,
+                        ),
+
+                        SizedBox(height: 14),
+
+                        Text(
+                          'Your AI-generated post will appear here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+
+                        SizedBox(height: 6),
+
+                        Text(
+                          'Click "Generate Post" to create content.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else ...[
+                const Text(
+                  'AI Generated Post',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  generatedPost!.content,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    height: 1.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+// ----------------------------------------------------------
+// POST DETAILS
+// ----------------------------------------------------------
+
+Widget _buildPostDetails() {
+  final platforms = _availablePlatforms;
+
+  if (platforms.isEmpty || selectedCampaign == null) {
+    return const SizedBox.shrink();
+  }
+
+  // Prevent index errors
+  if (selectedPlatform >= platforms.length) {
+    selectedPlatform = 0;
+  }
+
+  final platform = platforms[selectedPlatform];
+
+  final bool hasPost = generatedPost != null;
+
+  final String postTime =
+      selectedCampaign!.postTime ?? 'Not specified';
+
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF9FAFB),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(
+        color: const Color(0xFFE4E7EC),
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Post Details',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Wrap(
+          spacing: 20,
+          runSpacing: 10,
+          children: [
+            _detailItem(
+              'Theme',
+              _getDayTheme(selectedDay),
+            ),
+
+            _detailItem(
+              'Platform',
+              platform,
+            ),
+
+            _detailItem(
+              'Status',
+              hasPost
+                  ? (generatedPost!.status.isNotEmpty
+                      ? generatedPost!.status
+                      : 'Generated')
+                  : 'Not Generated',
+            ),
+
+            _detailItem(
+              'Scheduled',
+              '${_getDayDate(selectedDay)} • $postTime',
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 15),
+
+        if (hasPost)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _downloadPost,
+                icon: const Icon(
+                  Icons.download_outlined,
+                  size: 18,
+                ),
+                label: const Text(
+                  'Download Post',
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor:
+                      const Color(0xFF4F21FF),
+                  side: const BorderSide(
+                    color: Color(0xFF4F21FF),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape:
+                      RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(7),
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    ),
+  );
+}
+
+// ----------------------------------------------------------
+// DOWNLOAD BUTTON
+// ----------------------------------------------------------
+
+void _downloadPost() {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Post download will be connected to the generated image export.',
+      ),
+      duration: Duration(seconds: 2),
+    ),
+  );
+}
+
+
+// ----------------------------------------------------------
+// DETAIL ITEM
+// ----------------------------------------------------------
+
+Widget _detailItem(
+  String title,
+  String value,
+) {
+  final bool isStatus = title == 'Status';
+
+  return Column(
+    crossAxisAlignment:
+        CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(
+          fontSize: 10,
+          color: Color(0xFF667085),
+        ),
+      ),
+
+      const SizedBox(height: 4),
+
+      Container(
+        constraints: const BoxConstraints(
+          maxWidth: 250,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 9,
+          vertical: 5,
+        ),
+        decoration: BoxDecoration(
+          color: isStatus
+              ? const Color(0xFFE7F8EF)
+              : const Color(0xFFF1EEFF),
+          borderRadius:
+              BorderRadius.circular(20),
+        ),
+        child: Text(
+          value,
+          maxLines: 2,
+          overflow:
+              TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: isStatus
+                ? const Color(0xFF16834A)
+                : const Color(0xFF4520FF),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+
+// ----------------------------------------------------------
+// COMMON CARD
+// ----------------------------------------------------------
+
+Widget _card({
+  required Widget child,
+  EdgeInsetsGeometry padding =
+      const EdgeInsets.all(18),
+}) {
+  return Container(
+    padding: padding,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius:
+          BorderRadius.circular(10),
+      border: Border.all(
+        color: const Color(0xFFE4E7EC),
+      ),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x08000000),
+          blurRadius: 8,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: child,
+  );
+}
+}
+class _SavedCampaignsDialog extends StatelessWidget {
+  final List<Campaign> campaigns;
+
+  const _SavedCampaignsDialog({
+    required this.campaigns,
+  });
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Date not specified';
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(
+            Icons.folder_open_outlined,
+            color: Color(0xFF4F21FF),
+          ),
+          SizedBox(width: 10),
+          Text('Saved Campaigns'),
+        ],
+      ),
+
+      content: SizedBox(
+        width: 600,
+        child: campaigns.isEmpty
+            ? const Center(
+                child: Text('No saved campaigns found.'),
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                itemCount: campaigns.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final campaign = campaigns[index];
+
+                  return Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFE4E7EC),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1EEFF),
+                            borderRadius:
+                                BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.campaign_outlined,
+                            color: Color(0xFF4F21FF),
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                campaign.name,
+                                maxLines: 1,
+                                overflow:
+                                    TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Text(
+                                '${_formatDate(campaign.startDate)}'
+                                ' – '
+                                '${_formatDate(campaign.endDate)}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color:
+                                      Color(0xFF667085),
+                                ),
+                              ),
+
+                              const SizedBox(height: 5),
+
+                              Text(
+                                campaign.channels.isEmpty
+                                    ? 'No platforms'
+                                    : campaign.channels
+                                        .map(
+                                          (channel) =>
+                                              channel.label,
+                                        )
+                                        .join(' • '),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color:
+                                      Color(0xFF667085),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(
+                              context,
+                              campaign,
+                            );
+                          },
+                          style:
+                              OutlinedButton.styleFrom(
+                            foregroundColor:
+                                const Color(0xFF4F21FF),
+                            side: const BorderSide(
+                              color:
+                                  Color(0xFF4F21FF),
+                            ),
+                          ),
+                          child: const Text('Open'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ),
+
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+}
+
+

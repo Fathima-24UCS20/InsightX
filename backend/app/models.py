@@ -7,6 +7,8 @@ from sqlalchemy import (
     Date,
     ForeignKey,
     TIMESTAMP,
+    Text,
+    DateTime,
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
@@ -139,3 +141,55 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
+
+# -------------------------
+# Social Media Post Model
+# -------------------------
+
+class SocialPost(Base):
+    __tablename__ = "social_posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    campaign_id = Column(
+        Integer,
+        ForeignKey("campaigns.campaign_id"),
+        nullable=False,
+        index=True,
+    )
+
+    day_number = Column(
+        Integer,
+        nullable=False,
+    )
+
+    platform = Column(
+        String(50),
+        nullable=False,
+    )
+
+    content = Column(
+        Text,
+        nullable=False,
+    )
+
+    image_url = Column(
+        String(500),
+        nullable=True,
+    )
+
+    status = Column(
+        String(30),
+        default="Draft",
+        nullable=False,
+    )
+
+    scheduled_at = Column(
+        DateTime,
+        nullable=True,
+    )
+
+    created_at = Column(
+        TIMESTAMP,
+        server_default=func.now(),
+    )
