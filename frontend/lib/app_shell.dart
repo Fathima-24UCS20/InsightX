@@ -6,6 +6,7 @@ import 'screens/db_upload.dart';
 import 'screens/ai_insights_page.dart';
 import 'screens/campaign_generator_page.dart';
 import 'services/campaign_services.dart';
+import 'screens/products_page.dart';
 
 class AppShell extends StatefulWidget {
   final String role;
@@ -36,8 +37,8 @@ class _AppShellState extends State<AppShell> {
       case "Dataset Upload":
         return const DatasetUploadPage();
 
-      case "Customers":
-        return const Center(child: Text("Customers - Coming Soon"));
+      case "Products":
+        return const ProductsPage();
 
       case "Campaign Generator":
         return CampaignGeneratorPage(

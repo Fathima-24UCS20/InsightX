@@ -64,8 +64,8 @@ class AppSidebar extends StatelessWidget {
       roles: ["admin"],
     ),
     SidebarItem(
-      icon: Icons.people_rounded,
-      label: "Customers",
+      icon: Icons.shopping_bag_outlined,
+      label: "Products",
       roles: ["admin", "marketing manager"],
     ),
     SidebarItem(
@@ -156,7 +156,7 @@ class AppSidebar extends StatelessWidget {
                       ]
                     : [
                         _buildSection("Main", 0, 0),
-                        _buildSection("Customers", 1, 1),
+                        _buildSection("Products", 1, 1),
                         _buildSection("AI Marketing Studio", 2, 4),
                         _buildSection("Workspace", 5, 5),
                       ],
