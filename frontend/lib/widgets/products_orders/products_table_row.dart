@@ -7,6 +7,7 @@ class ProductTableRow extends StatelessWidget {
   final String brand;
   final String price;
   final double rating;
+  final bool isActive;
   final VoidCallback? onView;
   final VoidCallback? onEdit;
   final VoidCallback? onMore;
@@ -19,6 +20,7 @@ class ProductTableRow extends StatelessWidget {
     required this.brand,
     required this.price,
     required this.rating,
+    required this.isActive,
     this.onView,
     this.onEdit,
     this.onMore,
@@ -125,6 +127,18 @@ class ProductTableRow extends StatelessWidget {
                     color: Color(0xFF374151),
                   ),
                 ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            flex: 2,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(isActive ? Icons.circle : Icons.circle_outlined, size: 10),
+                const SizedBox(width: 6),
+                Text(isActive ? 'Active' : 'Inactive'),
               ],
             ),
           ),

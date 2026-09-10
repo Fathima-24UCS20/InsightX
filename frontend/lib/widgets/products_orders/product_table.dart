@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'products_table_row.dart';
-import 'orders_table_row.dart';
 
 class ProductTable extends StatefulWidget {
   const ProductTable({super.key});
@@ -10,7 +11,112 @@ class ProductTable extends StatefulWidget {
 }
 
 class _ProductTableState extends State<ProductTable> {
-  bool showProducts = true;
+  List<dynamic> products = [];
+  bool isLoadingProducts = true;
+  String? productError;
+
+  final TextEditingController searchController = TextEditingController();
+
+  List<String> categories = [];
+  String selectedCategory = 'All Categories';
+
+  int currentPage = 1;
+  int totalPages = 1;
+  int totalProducts = 0;
+
+  final int productsPerPage = 5;
+
+  String selectedSort = 'Product Name';
+  String sortOrder = 'asc';
+
+  @override
+  void initState() {
+    super.initState();
+    fetchProducts();
+    fetchCategories();
+  }
+
+  Future<void> fetchProducts({
+    String search = '',
+    String category = 'All Categories',
+    int page = 1,
+    String sortBy = 'name',
+    String order = 'asc',
+  }) async {
+    try {
+      setState(() {
+        isLoadingProducts = true;
+        productError = null;
+      });
+
+      final Map<String, String> params = {
+        'page': page.toString(),
+        'limit': productsPerPage.toString(),
+        'sort_by': sortBy,
+        'sort_order': order,
+      };
+
+      if (search.trim().isNotEmpty) {
+        params['search'] = search.trim();
+      }
+
+      if (category != 'All Categories') {
+        params['category'] = category;
+      }
+
+      final uri = Uri.parse(
+        'http://127.0.0.1:8000/products',
+      ).replace(queryParameters: params);
+
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (!mounted) return;
+
+        setState(() {
+          products = data['products'];
+          totalProducts = data['total'];
+          currentPage = data['page'];
+          totalPages = data['total_pages'];
+          isLoadingProducts = false;
+        });
+      } else {
+        if (!mounted) return;
+
+        setState(() {
+          productError = 'Failed to load products';
+          isLoadingProducts = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        productError = 'Unable to connect to server';
+        isLoadingProducts = false;
+      });
+    }
+  }
+
+  Future<void> fetchCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8000/products/categories'),
+      );
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+
+        setState(() {
+          categories = List<String>.from(jsonDecode(response.body));
+        });
+      }
+    } catch (e) {
+      // Keep the category list empty if the request fails.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,53 +134,30 @@ class _ProductTableState extends State<ProductTable> {
           // ==========================================
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Products / Orders switcher
-                Container(
-                  height: 40,
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildTab(
-                        title: 'Products',
-                        icon: Icons.inventory_2_outlined,
-                        selected: showProducts,
-                        onTap: () {
-                          setState(() {
-                            showProducts = true;
-                          });
-                        },
-                      ),
-                      _buildTab(
-                        title: 'Orders',
-                        icon: Icons.shopping_cart_outlined,
-                        selected: !showProducts,
-                        onTap: () {
-                          setState(() {
-                            showProducts = false;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                // Search
-                Expanded(
-                  child: SizedBox(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // ==========================================
+                  // SEARCH
+                  // ==========================================
+                  SizedBox(
+                    width: 320,
                     height: 40,
                     child: TextField(
+                      controller: searchController,
+                      onChanged: (value) {
+                        currentPage = 1;
+
+                        fetchProducts(
+                          search: value,
+                          category: selectedCategory,
+                          page: 1,
+                        );
+                      },
                       decoration: InputDecoration(
-                        hintText: showProducts
-                            ? 'Search products by name, category or brand...'
-                            : 'Search orders by ID or customer...',
+                        hintText:
+                            'Search products by name, category or brand...',
                         hintStyle: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade500,
@@ -111,62 +194,45 @@ class _ProductTableState extends State<ProductTable> {
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                // Category / Customer filter
-                _buildDropdown(
-                  showProducts ? 'All Categories' : 'All Customers',
-                  Icons.keyboard_arrow_down,
-                ),
+                  // ==========================================
+                  // CATEGORY FILTER
+                  // ==========================================
+                  _buildCategoryDropdown(),
 
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                // Status filter
-                _buildDropdown('All Status', Icons.keyboard_arrow_down),
+                  // ==========================================
+                  // SORT FILTER
+                  // ==========================================
+                  _buildSortDropdown(),
 
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                // More filters
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.filter_list_outlined, size: 17),
-                  label: const Text(
-                    'More Filters',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF374151),
-                    side: const BorderSide(color: Color(0xFFD9DEE7)),
-                    minimumSize: const Size(110, 40),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  // ==========================================
+                  // ADD PRODUCT
+                  // ==========================================
+                  ElevatedButton.icon(
+                    onPressed: _showAddProduct,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text(
+                      'Add Product',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6246EA),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      minimumSize: const Size(125, 40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Add button
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(
-                    showProducts ? 'Add Product' : 'Add Order',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6246EA),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    minimumSize: const Size(125, 40),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -175,71 +241,16 @@ class _ProductTableState extends State<ProductTable> {
           // ==========================================
           const Divider(height: 1, color: Color(0xFFE5E7EB)),
 
-          // ==========================================
-          // TABLE AREA
-          // ==========================================
-          if (showProducts) _buildProductTable() else _buildOrderTable(),
+          _buildProductTable(),
         ],
       ),
     );
   }
 
   // ==========================================
-  // TAB BUTTON
+  // CATEGORY DROPDOWN
   // ==========================================
-  Widget _buildTab({
-    required String title,
-    required IconData icon,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 3,
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: selected
-                  ? const Color(0xFF6246EA)
-                  : const Color(0xFF6B7280),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected
-                    ? const Color(0xFF6246EA)
-                    : const Color(0xFF6B7280),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ==========================================
-  // DROPDOWN
-  // ==========================================
-  Widget _buildDropdown(String text, IconData icon) {
+  Widget _buildCategoryDropdown() {
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -248,19 +259,363 @@ class _ProductTableState extends State<ProductTable> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFD9DEE7)),
       ),
-      child: Row(
-        children: [
-          Text(
-            text,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedCategory,
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 17,
+            color: Color(0xFF6B7280),
           ),
-          const SizedBox(width: 12),
-          Icon(icon, size: 17, color: const Color(0xFF6B7280)),
-        ],
+          style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+          items: [
+            const DropdownMenuItem(
+              value: 'All Categories',
+              child: Text('All Categories'),
+            ),
+            ...categories.map(
+              (category) =>
+                  DropdownMenuItem(value: category, child: Text(category)),
+            ),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+
+            setState(() {
+              selectedCategory = value;
+              currentPage = 1;
+            });
+
+            fetchProducts(
+              search: searchController.text,
+              category: selectedCategory,
+              page: 1,
+            );
+          },
+        ),
       ),
     );
   }
 
+  // ==========================================
+  // SORT DROPDOWN
+  // ==========================================
+  Widget _buildSortDropdown() {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFD9DEE7)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedSort,
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 17,
+            color: Color(0xFF6B7280),
+          ),
+          style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+          items: const [
+            DropdownMenuItem(
+              value: 'Product Name',
+              child: Text('Sort: Product Name'),
+            ),
+            DropdownMenuItem(value: 'Category', child: Text('Sort: Category')),
+            DropdownMenuItem(value: 'Brand', child: Text('Sort: Brand')),
+            DropdownMenuItem(value: 'Price', child: Text('Sort: Price')),
+            DropdownMenuItem(value: 'Rating', child: Text('Sort: Rating')),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+
+            setState(() {
+              selectedSort = value;
+              currentPage = 1;
+            });
+
+            fetchProducts(
+              search: searchController.text,
+              category: selectedCategory,
+              page: 1,
+              sortBy: _getSortColumn(),
+              order: sortOrder,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void goToPage(int page) {
+    if (page < 1 || page > totalPages) return;
+
+    fetchProducts(
+      search: searchController.text,
+      category: selectedCategory,
+      page: page,
+      sortBy: _getSortColumn(),
+      order: sortOrder,
+    );
+  }
+
+  String _getSortColumn() {
+    switch (selectedSort) {
+      case 'Product Name':
+        return 'name';
+      case 'Category':
+        return 'category';
+      case 'Brand':
+        return 'brand';
+      case 'Price':
+        return 'price';
+      case 'Rating':
+        return 'rating';
+      default:
+        return 'name';
+    }
+  }
+
+  // ==========================================
+  // ADD PRODUCT
+  // ==========================================
+  void _showAddProduct() {
+    final idController = TextEditingController();
+    final nameController = TextEditingController();
+    final brandController = TextEditingController();
+    final priceController = TextEditingController();
+    final ratingController = TextEditingController();
+
+    String selectedCategory = categories.isNotEmpty
+        ? categories.first
+        : 'Headphones';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
+              contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              title: Row(
+                children: [
+                  const Icon(
+                    Icons.add_box_outlined,
+                    color: Color(0xFF6246EA),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Add Product',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF172033),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.close, size: 20),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 430,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _editField('Product ID', idController),
+                      _editField('Product Name', nameController),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedCategory,
+                          items: categories.map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text(
+                                category,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setDialogState(() {
+                                selectedCategory = value;
+                              });
+                            }
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'Category',
+                            labelStyle: const TextStyle(fontSize: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      _editField('Brand', brandController),
+                      _editField(
+                        'Price',
+                        priceController,
+                        keyboardType: TextInputType.number,
+                      ),
+                      _editField(
+                        'Rating',
+                        ratingController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(dialogContext);
+                            },
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final price = double.tryParse(
+                                priceController.text.trim().replaceAll(',', ''),
+                              );
+
+                              final rating = double.tryParse(
+                                ratingController.text.trim(),
+                              );
+
+                              if (idController.text.trim().isEmpty ||
+                                  nameController.text.trim().isEmpty ||
+                                  brandController.text.trim().isEmpty ||
+                                  price == null ||
+                                  rating == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please enter valid product details',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              Navigator.pop(dialogContext);
+
+                              await addProduct(
+                                productId: idController.text.trim(),
+                                productName: nameController.text.trim(),
+                                category: selectedCategory,
+                                brand: brandController.text.trim(),
+                                price: price,
+                                rating: rating,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6246EA),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                            ),
+                            child: const Text('Add Product'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> addProduct({
+    required String productId,
+    required String productName,
+    required String category,
+    required String brand,
+    required double price,
+    required double rating,
+  }) async {
+    try {
+      final uri = Uri.parse('http://127.0.0.1:8000/products');
+
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'product_id': productId,
+          'product_name': productName,
+          'category': category,
+          'brand': brand,
+          'price': price.toString(),
+          'rating': rating.toString(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        await fetchProducts(
+          search: searchController.text,
+          category: selectedCategory,
+          page: 1,
+          sortBy: _getSortColumn(),
+          order: sortOrder,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product added successfully')),
+          );
+        }
+      } else if (response.statusCode == 409) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product ID already exists')),
+          );
+        }
+      } else {
+        print('ADD PRODUCT STATUS: ${response.statusCode}');
+        print('ADD PRODUCT RESPONSE: ${response.body}');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed: ${response.statusCode} ${response.body}'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to connect to server')),
+        );
+      }
+    }
+  }
+
+  // ==========================================
+  // PRODUCT TABLE
+  // ==========================================
   Widget _buildProductTable() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -281,20 +636,14 @@ class _ProductTableState extends State<ProductTable> {
                       width: 85,
                       child: _TableHeaderText('Product ID'),
                     ),
-
                     const Expanded(flex: 3, child: _TableHeaderText('Product')),
-
                     const Expanded(
                       flex: 2,
                       child: _TableHeaderText('Category'),
                     ),
-
                     const Expanded(flex: 2, child: _TableHeaderText('Brand')),
-
                     const Expanded(flex: 2, child: _TableHeaderText('Price')),
-
                     const Expanded(flex: 2, child: _TableHeaderText('Rating')),
-
                     const SizedBox(
                       width: 120,
                       child: _TableHeaderText('Actions', alignRight: true),
@@ -306,76 +655,61 @@ class _ProductTableState extends State<ProductTable> {
               // ==========================================
               // PRODUCT ROWS
               // ==========================================
-              ProductTableRow(
-                productId: 'P001',
-                productName: 'HP Headphones 2',
-                category: 'Headphones',
-                brand: 'HP',
-                price: '₹5,600',
-                rating: 4.9,
-                onView: () {
-                  _showProductDetails(
-                    productId: 'P001',
-                    productName: 'HP Headphones 2',
-                    category: 'Headphones',
-                    brand: 'HP',
-                    price: '₹5,600',
-                    rating: 4.9,
+              if (isLoadingProducts)
+                const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: CircularProgressIndicator(),
+                )
+              else if (productError != null)
+                Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Text(
+                    productError!,
+                    style: const TextStyle(fontSize: 13, color: Colors.red),
+                  ),
+                )
+              else if (products.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Text(
+                    'No products found',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                  ),
+                )
+              else
+                ...products.map((product) {
+                  return ProductTableRow(
+                    productId: product['id'].toString(),
+                    productName: product['name'].toString(),
+                    category: product['category']?.toString() ?? 'N/A',
+                    brand: product['brand']?.toString() ?? 'N/A',
+                    price: '₹${product['price']}',
+                    rating:
+                        double.tryParse(product['rating'].toString()) ?? 0.0,
+                    isActive: product['is_active'] == true,
+                    onView: () {
+                      fetchProductDetails(product['id'].toString());
+                    },
+                    onEdit: () {
+                      _showEditProduct(
+                        productId: product['id'].toString(),
+                        productName: product['name'].toString(),
+                        category: product['category']?.toString() ?? 'N/A',
+                        brand: product['brand']?.toString() ?? 'N/A',
+                        price: '₹${product['price']}',
+                        rating:
+                            double.tryParse(product['rating'].toString()) ??
+                            0.0,
+                      );
+                    },
+                    onMore: () {
+                      _showProductMoreMenu(
+                        productId: product['id'].toString(),
+                        productName: product['name'].toString(),
+                      );
+                    },
                   );
-                },
-                onEdit: () {
-                  _showEditProduct(
-                    productId: 'P001',
-                    productName: 'HP Headphones 2',
-                    category: 'Headphones',
-                    brand: 'HP',
-                    price: '₹5,600',
-                    rating: 4.9,
-                  );
-                },
-                onMore: () {
-                  _showProductMoreMenu(
-                    productId: 'P001',
-                    productName: 'HP Headphones 2',
-                  );
-                },
-              ),
-
-              const ProductTableRow(
-                productId: 'P002',
-                productName: 'Sony Smartwatch 78',
-                category: 'Smartwatch',
-                brand: 'Sony',
-                price: '₹18,500',
-                rating: 4.7,
-              ),
-
-              const ProductTableRow(
-                productId: 'P003',
-                productName: 'Dell Tablet 94',
-                category: 'Tablet',
-                brand: 'Dell',
-                price: '₹42,000',
-                rating: 4.6,
-              ),
-
-              const ProductTableRow(
-                productId: 'P004',
-                productName: 'Sony Smartphone 29',
-                category: 'Smartphone',
-                brand: 'Sony',
-                price: '₹22,999',
-                rating: 4.8,
-              ),
-
-              const ProductTableRow(
-                productId: 'P005',
-                productName: 'OnePlus Headphones 44',
-                category: 'Headphones',
-                brand: 'OnePlus',
-                price: '₹4,999',
-                rating: 4.5,
-              ),
+                }).toList(),
 
               // ==========================================
               // PAGINATION FOOTER
@@ -390,44 +724,48 @@ class _ProductTableState extends State<ProductTable> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Showing 1 to 5 of 128 products',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                    Text(
+                      totalProducts == 0
+                          ? 'Showing 0 products'
+                          : 'Showing ${(currentPage - 1) * productsPerPage + 1} '
+                                'to ${(currentPage - 1) * productsPerPage + products.length} '
+                                'of $totalProducts products',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
                     ),
-
                     Row(
                       children: [
-                        _paginationButton(Icons.chevron_left, enabled: false),
-
-                        const SizedBox(width: 6),
-
-                        _paginationNumber('1', selected: true),
-
-                        const SizedBox(width: 6),
-
-                        _paginationNumber('2', selected: false),
-
-                        const SizedBox(width: 6),
-
-                        _paginationNumber('3', selected: false),
-
-                        const SizedBox(width: 6),
-
-                        const Text(
-                          '...',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                          ),
+                        _paginationButton(
+                          Icons.chevron_left,
+                          enabled: currentPage > 1,
+                          onPressed: currentPage > 1
+                              ? () => goToPage(currentPage - 1)
+                              : null,
                         ),
-
                         const SizedBox(width: 6),
-
-                        _paginationNumber('13', selected: false),
-
+                        for (
+                          int page = 1;
+                          page <= totalPages && page <= 5;
+                          page++
+                        ) ...[
+                          _paginationNumber(
+                            '$page',
+                            selected: page == currentPage,
+                            onPressed: () => goToPage(page),
+                          ),
+                          if (page < totalPages && page < 5)
+                            const SizedBox(width: 6),
+                        ],
                         const SizedBox(width: 6),
-
-                        _paginationButton(Icons.chevron_right, enabled: true),
+                        _paginationButton(
+                          Icons.chevron_right,
+                          enabled: currentPage < totalPages,
+                          onPressed: currentPage < totalPages
+                              ? () => goToPage(currentPage + 1)
+                              : null,
+                        ),
                       ],
                     ),
                   ],
@@ -440,209 +778,106 @@ class _ProductTableState extends State<ProductTable> {
     );
   }
 
-  Widget _buildOrderTable() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SizedBox(
-          width: constraints.maxWidth,
-          child: Column(
-            children: [
-              // ==========================================
-              // TABLE HEADER
-              // ==========================================
-              Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                color: const Color(0xFFF9FAFB),
-                child: Row(
-                  children: [
-                    const SizedBox(
-                      width: 100,
-                      child: _TableHeaderText('Order ID'),
-                    ),
+  Widget _paginationNumber(
+    String number, {
+    required bool selected,
+    VoidCallback? onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(7),
+      child: Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEDE9FE) : Colors.white,
+          border: Border.all(
+            color: selected ? const Color(0xFF6246EA) : const Color(0xFFE5E7EB),
+          ),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Text(
+          number,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? const Color(0xFF6246EA) : const Color(0xFF374151),
+          ),
+        ),
+      ),
+    );
+  }
 
-                    const Expanded(
-                      flex: 2,
-                      child: _TableHeaderText('Customer ID'),
-                    ),
+  Widget _paginationButton(
+    IconData icon, {
+    required bool enabled,
+    VoidCallback? onPressed,
+  }) {
+    return InkWell(
+      onTap: enabled ? onPressed : null,
+      borderRadius: BorderRadius.circular(7),
+      child: Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? const Color(0xFF374151) : const Color(0xFFD1D5DB),
+        ),
+      ),
+    );
+  }
 
-                    const Expanded(
-                      flex: 2,
-                      child: _TableHeaderText('Order Date'),
-                    ),
+  // ==========================================
+  // PRODUCT DETAILS
+  // ==========================================
+  Future<void> fetchProductDetails(String productId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8000/products/$productId/details'),
+      );
 
-                    const Expanded(
-                      flex: 2,
-                      child: _TableHeaderText('Payment Method'),
-                    ),
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-                    const Expanded(
-                      flex: 2,
-                      child: _TableHeaderText('Total Amount'),
-                    ),
+        if (!mounted) return;
 
-                    const SizedBox(
-                      width: 120,
-                      child: _TableHeaderText('Actions', alignRight: true),
-                    ),
-                  ],
-                ),
-              ),
+        _showProductDetails(
+          productId: data['id'].toString(),
+          productName: data['name'].toString(),
+          category: data['category']?.toString() ?? 'N/A',
+          brand: data['brand']?.toString() ?? 'N/A',
+          price: '₹${data['price']}',
+          rating: double.tryParse(data['rating'].toString()) ?? 0.0,
+          unitsSold: int.tryParse(data['units_sold'].toString()) ?? 0,
+          revenue: double.tryParse(data['revenue'].toString()) ?? 0.0,
+          orders: int.tryParse(data['orders'].toString()) ?? 0,
+        );
+      } else {
+        if (!mounted) return;
 
-              // ==========================================
-              // ORDER ROWS
-              // ==========================================
-              OrderTableRow(
-                orderId: '1',
-                customerId: 'C0380',
-                orderDate: '17-03-2025',
-                paymentMethod: 'Credit Card',
-                totalAmount: '₹2,26,696',
-                onView: () {
-                  _showOrderDetails(
-                    orderId: '1',
-                    customerId: 'C0380',
-                    orderDate: '17-03-2025',
-                    paymentMethod: 'Credit Card',
-                    totalAmount: '₹2,26,696',
-                  );
-                },
-              ),
-
-              const OrderTableRow(
-                orderId: '2',
-                customerId: 'C0425',
-                orderDate: '03-07-2024',
-                paymentMethod: 'Credit Card',
-                totalAmount: '₹1,93,042',
-              ),
-
-              const OrderTableRow(
-                orderId: '3',
-                customerId: 'C0175',
-                orderDate: '26-01-2025',
-                paymentMethod: 'Cash on Delivery',
-                totalAmount: '₹1,09,905',
-              ),
-
-              const OrderTableRow(
-                orderId: '4',
-                customerId: 'C0302',
-                orderDate: '12-09-2024',
-                paymentMethod: 'UPI',
-                totalAmount: '₹78,450',
-              ),
-
-              const OrderTableRow(
-                orderId: '5',
-                customerId: 'C0118',
-                orderDate: '28-05-2025',
-                paymentMethod: 'Debit Card',
-                totalAmount: '₹56,890',
-              ),
-
-              // ==========================================
-              // PAGINATION
-              // ==========================================
-              Container(
-                height: 58,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Showing 1 to 5 of 5000 orders',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-                    ),
-
-                    Row(
-                      children: [
-                        _paginationButton(Icons.chevron_left, enabled: false),
-
-                        const SizedBox(width: 6),
-
-                        _paginationNumber('1', selected: true),
-
-                        const SizedBox(width: 6),
-
-                        _paginationNumber('2', selected: false),
-
-                        const SizedBox(width: 6),
-
-                        _paginationNumber('3', selected: false),
-
-                        const SizedBox(width: 6),
-
-                        const Text(
-                          '...',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-
-                        const SizedBox(width: 6),
-
-                        _paginationNumber('500', selected: false),
-
-                        const SizedBox(width: 6),
-
-                        _paginationButton(Icons.chevron_right, enabled: true),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to load product details: ${response.statusCode}',
+            ),
           ),
         );
-      },
-    );
-  }
+      }
+    } catch (e) {
+      if (!mounted) return;
 
-  Widget _paginationNumber(String number, {required bool selected}) {
-    return Container(
-      width: 34,
-      height: 34,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: selected ? const Color(0xFFEDE9FE) : Colors.white,
-        border: Border.all(
-          color: selected ? const Color(0xFF6246EA) : const Color(0xFFE5E7EB),
-        ),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Text(
-        number,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-          color: selected ? const Color(0xFF6246EA) : const Color(0xFF374151),
-        ),
-      ),
-    );
-  }
-
-  Widget _paginationButton(IconData icon, {required bool enabled}) {
-    return Container(
-      width: 34,
-      height: 34,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Icon(
-        icon,
-        size: 18,
-        color: enabled ? const Color(0xFF374151) : const Color(0xFFD1D5DB),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to connect to server')),
+      );
+    }
   }
 
   void _showProductDetails({
@@ -652,54 +887,47 @@ class _ProductTableState extends State<ProductTable> {
     required String brand,
     required String price,
     required double rating,
+    required int unitsSold,
+    required double revenue,
+    required int orders,
   }) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
           ),
-          titlePadding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
-          contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
           title: Row(
             children: [
-              const Icon(
-                Icons.inventory_2_outlined,
-                color: Color(0xFF6246EA),
-                size: 22,
-              ),
+              const Icon(Icons.inventory_2_outlined, color: Color(0xFF6246EA)),
               const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Product Details',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF172033),
-                  ),
-                ),
-              ),
+              const Expanded(child: Text('Product Details')),
               IconButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                 },
-                icon: const Icon(Icons.close, size: 20),
+                icon: const Icon(Icons.close),
               ),
             ],
           ),
           content: SizedBox(
             width: 430,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _detailRow('Product ID', productId),
-                _detailRow('Product Name', productName),
-                _detailRow('Category', category),
-                _detailRow('Brand', brand),
-                _detailRow('Price', price),
-                _detailRow('Rating', '⭐ ${rating.toStringAsFixed(1)}'),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _detailRow('Product ID', productId),
+                  _detailRow('Product Name', productName),
+                  _detailRow('Category', category),
+                  _detailRow('Brand', brand),
+                  _detailRow('Price', price),
+                  _detailRow('Rating', '⭐ ${rating.toStringAsFixed(1)}'),
+                  const Divider(height: 28),
+                  _detailRow('Units Sold', unitsSold.toString()),
+                  _detailRow('Revenue', '₹${revenue.toStringAsFixed(0)}'),
+                  _detailRow('Orders', orders.toString()),
+                ],
+              ),
             ),
           ),
         );
@@ -739,6 +967,65 @@ class _ProductTableState extends State<ProductTable> {
     );
   }
 
+  // ==========================================
+  // UPDATE PRODUCT
+  // ==========================================
+  Future<void> updateProduct({
+    required String productId,
+    required String productName,
+    required String category,
+    required String brand,
+    required double price,
+    required double rating,
+  }) async {
+    try {
+      final uri = Uri.parse('http://127.0.0.1:8000/products/$productId');
+
+      final response = await http.put(
+        uri,
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'product_name': productName,
+          'category': category,
+          'brand': brand,
+          'price': price.toString(),
+          'rating': rating.toString(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        await fetchProducts(
+          search: searchController.text,
+          category: selectedCategory,
+          page: currentPage,
+          sortBy: _getSortColumn(),
+          order: sortOrder,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product updated successfully')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to update product')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to connect to server')),
+        );
+      }
+    }
+  }
+
+  // ==========================================
+  // EDIT PRODUCT
+  // ==========================================
   void _showEditProduct({
     required String productId,
     required String productName,
@@ -804,23 +1091,18 @@ class _ProductTableState extends State<ProductTable> {
                         TextEditingController(text: productId),
                         enabled: false,
                       ),
-
                       _editField('Product Name', nameController),
-
                       _editCategoryField(selectedCategory, (value) {
                         setDialogState(() {
                           selectedCategory = value!;
                         });
                       }),
-
                       _editField('Brand', brandController),
-
                       _editField(
                         'Price',
                         priceController,
                         keyboardType: TextInputType.number,
                       ),
-
                       _editField(
                         'Rating',
                         ratingController,
@@ -828,9 +1110,7 @@ class _ProductTableState extends State<ProductTable> {
                           decimal: true,
                         ),
                       ),
-
                       const SizedBox(height: 12),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -840,17 +1120,40 @@ class _ProductTableState extends State<ProductTable> {
                             },
                             child: const Text('Cancel'),
                           ),
-
                           const SizedBox(width: 10),
-
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
+                              final price = double.tryParse(
+                                priceController.text.trim().replaceAll(',', ''),
+                              );
+
+                              final rating = double.tryParse(
+                                ratingController.text.trim(),
+                              );
+
+                              if (nameController.text.trim().isEmpty ||
+                                  brandController.text.trim().isEmpty ||
+                                  price == null ||
+                                  rating == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please enter valid product details',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
                               Navigator.pop(dialogContext);
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Product updated successfully'),
-                                ),
+                              await updateProduct(
+                                productId: productId,
+                                productName: nameController.text.trim(),
+                                category: selectedCategory,
+                                brand: brandController.text.trim(),
+                                price: price,
+                                rating: rating,
                               );
                             },
                             style: ElevatedButton.styleFrom(
@@ -935,6 +1238,9 @@ class _ProductTableState extends State<ProductTable> {
     );
   }
 
+  // ==========================================
+  // PRODUCT MORE MENU
+  // ==========================================
   void _showProductMoreMenu({
     required String productId,
     required String productName,
@@ -959,9 +1265,7 @@ class _ProductTableState extends State<ProductTable> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -973,9 +1277,7 @@ class _ProductTableState extends State<ProductTable> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 ListTile(
                   leading: const Icon(
                     Icons.shopping_bag_outlined,
@@ -986,13 +1288,12 @@ class _ProductTableState extends State<ProductTable> {
                   onTap: () {
                     Navigator.pop(context);
 
-                    _showProductOrders(
+                    fetchProductOrders(
                       productId: productId,
                       productName: productName,
                     );
                   },
                 ),
-
                 ListTile(
                   leading: const Icon(
                     Icons.pause_circle_outline,
@@ -1019,143 +1320,179 @@ class _ProductTableState extends State<ProductTable> {
     );
   }
 
+  // ==========================================
+  // PRODUCT ORDERS
+  // ==========================================
+  Future<void> fetchProductOrders({
+    required String productId,
+    required String productName,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8000/products/$productId/orders'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (!mounted) return;
+
+        _showProductOrders(
+          productId: productId,
+          productName: productName,
+          orders: List<dynamic>.from(data['orders'] ?? []),
+        );
+      } else {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load product orders')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
   void _showProductOrders({
     required String productId,
     required String productName,
+    required List<dynamic> orders,
   }) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
           ),
-          title: Text(
-            '$productName - Orders',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-          ),
-          content: const SizedBox(
-            width: 450,
-            height: 250,
-            child: Center(
-              child: Text(
-                'Orders containing this product will appear here.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+          title: Row(
+            children: [
+              const Icon(Icons.shopping_bag_outlined, color: Color(0xFF6246EA)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Orders - $productName',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
+              IconButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 650,
+            height: 400,
+            child: orders.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No orders found for this product.',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Order ID')),
+                          DataColumn(label: Text('Date')),
+                          DataColumn(label: Text('Customer')),
+                          DataColumn(label: Text('Quantity')),
+                          DataColumn(label: Text('Unit Price')),
+                          DataColumn(label: Text('Total')),
+                        ],
+                        rows: orders.map((order) {
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(order['order_id'].toString())),
+                              DataCell(
+                                Text(order['order_date']?.toString() ?? 'N/A'),
+                              ),
+                              DataCell(
+                                Text(order['customer_id']?.toString() ?? 'N/A'),
+                              ),
+                              DataCell(Text(order['quantity'].toString())),
+                              DataCell(Text('₹${order['unit_price']}')),
+                              DataCell(Text('₹${order['item_total']}')),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
           ),
         );
       },
     );
   }
 
-  void _confirmDeactivateProduct({
+  // ==========================================
+  // DEACTIVATE PRODUCT
+  // ==========================================
+  Future<void> _confirmDeactivateProduct({
     required String productId,
     required String productName,
-  }) {
-    showDialog(
+  }) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Deactivate Product?',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-          ),
-          content: Text(
-            'Are you sure you want to deactivate "$productName"?',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-          ),
+          title: const Text('Deactivate Product'),
+          content: Text('Are you sure you want to deactivate "$productName"?'),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext, false);
               },
               child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Product deactivated successfully'),
-                  ),
-                );
+                Navigator.pop(dialogContext, true);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE88900),
-                foregroundColor: Colors.white,
-                elevation: 0,
-              ),
               child: const Text('Deactivate'),
             ),
           ],
         );
       },
     );
-  }
 
-  void _showOrderDetails({
-    required String orderId,
-    required String customerId,
-    required String orderDate,
-    required String paymentMethod,
-    required String totalAmount,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          titlePadding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
-          contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-          title: Row(
-            children: [
-              const Icon(
-                Icons.shopping_bag_outlined,
-                color: Color(0xFF6246EA),
-                size: 22,
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Order Details',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF172033),
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.close, size: 20),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 430,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _detailRow('Order ID', orderId),
-                _detailRow('Customer ID', customerId),
-                _detailRow('Order Date', orderDate),
-                _detailRow('Payment Method', paymentMethod),
-                _detailRow('Total Amount', totalAmount),
-              ],
-            ),
-          ),
+    if (confirmed != true) return;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('http://127.0.0.1:8000/products/$productId/deactivate'),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product deactivated successfully')),
         );
-      },
-    );
+
+        fetchProducts();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to deactivate product')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 }
 
