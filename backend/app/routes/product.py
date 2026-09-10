@@ -580,6 +580,26 @@ def deactivate_product(product_id: str):
         "message": "Product deactivated successfully"
     }
 
+@router.patch("/products/{product_id}/reactivate")
+def reactivate_product(product_id: str):
+    query = text("""
+        UPDATE products
+        SET is_active = TRUE
+        WHERE p_id = :product_id
+        RETURNING p_id
+    """)
+
+    with engine.begin() as conn:
+        result = conn.execute(query, {"product_id": product_id}).fetchone()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    return {
+        "message": "Product reactivated successfully",
+        "product_id": product_id
+    }
+
 @router.get("/orders")
 def get_orders():
     query = text("""

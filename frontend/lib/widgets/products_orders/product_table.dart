@@ -129,18 +129,12 @@ class _ProductTableState extends State<ProductTable> {
       ),
       child: Column(
         children: [
-          // ==========================================
-          // TOOLBAR
-          // ==========================================
           Padding(
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  // ==========================================
-                  // SEARCH
-                  // ==========================================
                   SizedBox(
                     width: 320,
                     height: 40,
@@ -197,23 +191,14 @@ class _ProductTableState extends State<ProductTable> {
 
                   const SizedBox(width: 12),
 
-                  // ==========================================
-                  // CATEGORY FILTER
-                  // ==========================================
                   _buildCategoryDropdown(),
 
                   const SizedBox(width: 12),
 
-                  // ==========================================
-                  // SORT FILTER
-                  // ==========================================
                   _buildSortDropdown(),
 
                   const SizedBox(width: 12),
 
-                  // ==========================================
-                  // ADD PRODUCT
-                  // ==========================================
                   ElevatedButton.icon(
                     onPressed: _showAddProduct,
                     icon: const Icon(Icons.add, size: 18),
@@ -236,9 +221,6 @@ class _ProductTableState extends State<ProductTable> {
             ),
           ),
 
-          // ==========================================
-          // TABLE AREA
-          // ==========================================
           const Divider(height: 1, color: Color(0xFFE5E7EB)),
 
           _buildProductTable(),
@@ -623,9 +605,6 @@ class _ProductTableState extends State<ProductTable> {
           width: constraints.maxWidth,
           child: Column(
             children: [
-              // ==========================================
-              // TABLE HEADER
-              // ==========================================
               Container(
                 height: 48,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -652,9 +631,6 @@ class _ProductTableState extends State<ProductTable> {
                 ),
               ),
 
-              // ==========================================
-              // PRODUCT ROWS
-              // ==========================================
               if (isLoadingProducts)
                 const Padding(
                   padding: EdgeInsets.all(40),
@@ -686,10 +662,14 @@ class _ProductTableState extends State<ProductTable> {
                     price: '₹${product['price']}',
                     rating:
                         double.tryParse(product['rating'].toString()) ?? 0.0,
+
+                    // Existing active status
                     isActive: product['is_active'] == true,
+
                     onView: () {
                       fetchProductDetails(product['id'].toString());
                     },
+
                     onEdit: () {
                       _showEditProduct(
                         productId: product['id'].toString(),
@@ -702,18 +682,19 @@ class _ProductTableState extends State<ProductTable> {
                             0.0,
                       );
                     },
+
                     onMore: () {
                       _showProductMoreMenu(
                         productId: product['id'].toString(),
                         productName: product['name'].toString(),
+
+                        // NEW: pass active status to More menu
+                        isActive: product['is_active'] == true,
                       );
                     },
                   );
                 }).toList(),
 
-              // ==========================================
-              // PAGINATION FOOTER
-              // ==========================================
               Container(
                 height: 58,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1244,6 +1225,9 @@ class _ProductTableState extends State<ProductTable> {
   void _showProductMoreMenu({
     required String productId,
     required String productName,
+
+    // NEW
+    required bool isActive,
   }) {
     showModalBottomSheet(
       context: context,
@@ -1265,7 +1249,9 @@ class _ProductTableState extends State<ProductTable> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
+
                 const SizedBox(height: 18),
+
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -1277,7 +1263,12 @@ class _ProductTableState extends State<ProductTable> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 12),
+
+                // ==========================================
+                // VIEW ORDERS
+                // ==========================================
                 ListTile(
                   leading: const Icon(
                     Icons.shopping_bag_outlined,
@@ -1294,24 +1285,49 @@ class _ProductTableState extends State<ProductTable> {
                     );
                   },
                 ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.pause_circle_outline,
-                    color: Color(0xFFE88900),
-                  ),
-                  title: const Text('Deactivate Product'),
-                  subtitle: const Text(
-                    'Remove this product from active listings',
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
 
-                    _confirmDeactivateProduct(
-                      productId: productId,
-                      productName: productName,
-                    );
-                  },
-                ),
+                // ==========================================
+                // ACTIVE PRODUCT
+                // ==========================================
+                if (isActive)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.pause_circle_outline,
+                      color: Color(0xFFE88900),
+                    ),
+                    title: const Text('Deactivate Product'),
+                    subtitle: const Text(
+                      'Remove this product from active listings',
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      _confirmDeactivateProduct(
+                        productId: productId,
+                        productName: productName,
+                      );
+                    },
+                  ),
+
+                // ==========================================
+                // INACTIVE PRODUCT
+                // ==========================================
+                if (!isActive)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.play_circle_outline,
+                      color: Color(0xFF16A34A),
+                    ),
+                    title: const Text('Reactivate Product'),
+                    subtitle: const Text(
+                      'Restore this product to active listings',
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      reactivateProduct(productId, productName);
+                    },
+                  ),
               ],
             ),
           ),
@@ -1484,6 +1500,44 @@ class _ProductTableState extends State<ProductTable> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to deactivate product')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  // ==========================================
+  // REACTIVATE PRODUCT
+  // ==========================================
+  Future<void> reactivateProduct(String productId, String productName) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('http://127.0.0.1:8000/products/$productId/reactivate'),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('"$productName" reactivated successfully')),
+        );
+
+        // Refresh using the current filters/page
+        await fetchProducts(
+          search: searchController.text,
+          category: selectedCategory,
+          page: currentPage,
+          sortBy: _getSortColumn(),
+          order: sortOrder,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to reactivate product')),
         );
       }
     } catch (e) {
