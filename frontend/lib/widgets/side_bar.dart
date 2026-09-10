@@ -72,6 +72,11 @@ class AppSidebar extends StatelessWidget {
       roles: ["admin", "marketing manager"],
     ),
     SidebarItem(
+      icon: Icons.shopping_bag_outlined,
+      label: "Products",
+      roles: ["admin", "marketing manager"],
+    ),
+    SidebarItem(
       icon: Icons.campaign_rounded,
       label: "Campaign Generator",
       roles: ["admin", "marketing manager"],
@@ -94,6 +99,11 @@ class AppSidebar extends StatelessWidget {
     SidebarItem(
       icon: Icons.settings_rounded,
       label: "Settings",
+      roles: ["admin"],
+    ),
+    SidebarItem(
+      icon: Icons.description_rounded,
+      label: "Reports",
       roles: ["admin"],
     ),
   ];
@@ -131,8 +141,9 @@ class AppSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
-              mainAxisAlignment:
-                  isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+              mainAxisAlignment: isExpanded
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
               children: [
                 IconButton(
                   onPressed: onToggle,
@@ -155,21 +166,25 @@ class AppSidebar extends StatelessWidget {
                 children: role == "admin"
                     ? [
                         _buildSection("Main", 0, 0),
-                        _buildSection("Data", 1, 2),
-                        _buildSection("AI Marketing Studio", 3, 5),
-                        _buildSection("Workspace", 6, 7),
+                        _buildSection("Data", 1, 3),
+                        _buildSection("AI Marketing Studio", 4, 6),
+                        _buildSection("Workspace", 7, 9),
                       ]
                     : [
                         _buildSection("Main", 0, 0),
-                        _buildSection("Customers", 1, 1),
-                        _buildSection("AI Marketing Studio", 2, 4),
-                        _buildSection("Workspace", 5, 5),
+                        _buildSection("Data", 1, 2),
+                        _buildSection("AI Marketing Studio", 3, 5),
+                        _buildSection("Workspace", 6, 6),
                       ],
               ),
             ),
           ),
 
-          const Divider(color: Colors.white24, thickness: 1, height: 1),
+          const Divider(
+            color: Colors.white24,
+            thickness: 1,
+            height: 1,
+          ),
 
           // Bottom Profile
           Padding(
@@ -179,7 +194,11 @@ class AppSidebar extends StatelessWidget {
                 const CircleAvatar(
                   radius: 16,
                   backgroundColor: Colors.white24,
-                  child: Icon(Icons.person, color: Colors.white, size: 18),
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
                 if (isExpanded) ...[
                   const SizedBox(width: 10),
@@ -198,7 +217,8 @@ class AppSidebar extends StatelessWidget {
                       ),
                       onSelected: (value) async {
                         if (value == 'logout') {
-                          final prefs = await SharedPreferences.getInstance();
+                          final prefs =
+                              await SharedPreferences.getInstance();
                           await prefs.remove('access_token');
 
                           if (context.mounted) {
@@ -239,7 +259,9 @@ class AppSidebar extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              role == "admin" ? "Admin" : "Marketing Manager",
+                              role == "admin"
+                                  ? "Admin"
+                                  : "Marketing Manager",
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white70,
@@ -292,7 +314,10 @@ class _SidebarTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             child: Row(
               mainAxisAlignment: isExpanded
                   ? MainAxisAlignment.start
@@ -302,7 +327,9 @@ class _SidebarTile extends StatelessWidget {
                   Container(
                     width: 3,
                     height: 18,
-                    color: active ? Colors.deepPurpleAccent : Colors.transparent,
+                    color: active
+                        ? Colors.deepPurpleAccent
+                        : Colors.transparent,
                   ),
                 if (isExpanded) const SizedBox(width: 12),
                 Icon(
@@ -318,7 +345,9 @@ class _SidebarTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: active ? Colors.white : Colors.white60,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: active
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                         fontSize: 14,
                       ),
                     ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../widgets/lead_summary_card.dart';
-import '../widgets/lead_table.dart';
-import '../widgets/lead_suggestion_card.dart';
-import '../widgets/recent_lead_card.dart';
-import '../widgets/lead_status_chart.dart';
+import '../widgets/lead/lead_summary_card.dart';
+import '../widgets/lead/lead_table.dart';
+import '../widgets/lead/lead_suggestion_card.dart';
+import '../widgets/lead/recent_lead_card.dart';
+import '../widgets/lead/lead_status_chart.dart';
 import '../models/lead.dart';
 import '../models/lead_summary.dart';
 import '../services/lead_services.dart';
