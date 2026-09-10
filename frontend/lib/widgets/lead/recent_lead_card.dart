@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/recent_lead.dart';
-import '../services/lead_services.dart';
+import '../../models/recent_lead.dart';
+import '../../services/lead_services.dart';
 import 'package:intl/intl.dart';
 
 class RecentLeadCard extends StatelessWidget {

@@ -5,8 +5,8 @@ import '../widgets/ai_insights/revenue_trend_chart.dart';
 import '../widgets/campaign_list_card.dart';
 import '../widgets/ai_insights/audience_card.dart';
 import '../widgets/ai_insights/customer_distribuition.dart';
-import '../widgets/ai_insights/sentiment_gauge_card.dart'; 
-import '../widgets/ai_insights/top_product.dart'; // NEW — real data
+import '../widgets/ai_insights/sentiment_gauge_card.dart';
+import '../widgets/ai_insights/top_product.dart';
 import '../widgets/ai_insights/topic_intrest.dart';
 import '../widgets/recomendation.dart';
 import '../widgets/ai_insights/forecast_chart.dart';
@@ -15,9 +15,17 @@ import '../services/analytics_services.dart';
 
 String formatCurrency(num? v) {
   if (v == null) return '--';
+
   final value = v.toDouble();
-  if (value >= 10000000) return '₹${(value / 10000000).toStringAsFixed(2)} Cr';
-  if (value >= 100000) return '₹${(value / 100000).toStringAsFixed(2)} L';
+
+  if (value >= 10000000) {
+    return '₹${(value / 10000000).toStringAsFixed(2)} Cr';
+  }
+
+  if (value >= 100000) {
+    return '₹${(value / 100000).toStringAsFixed(2)} L';
+  }
+
   return '₹${value.toStringAsFixed(0)}';
 }
 
@@ -38,15 +46,26 @@ class AIInsightsPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
+
               const SizedBox(height: 24),
+
               _buildKpiRow(),
+
               const SizedBox(height: 20),
+
               _buildRow1(),
+
               const SizedBox(height: 20),
-              _buildRow1b(), // NEW row: real-data cards
+
+              // Real-data cards
+              _buildRow1b(),
+
               const SizedBox(height: 20),
+
               _buildRow2(),
+
               const SizedBox(height: 20),
+
               const SalesForecastCard(),
             ],
           ),
@@ -64,15 +83,23 @@ class AIInsightsPage extends StatelessWidget {
           children: const [
             Text(
               "AI Insights",
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF1B2559)),
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B2559),
+              ),
             ),
             SizedBox(height: 6),
             Text(
               "AI-powered insights to help you make smarter marketing decisions.",
-              style: TextStyle(color: Colors.grey, fontSize: 15),
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+              ),
             ),
           ],
         ),
+
         Row(
           children: [
             OutlinedButton.icon(
@@ -80,7 +107,9 @@ class AIInsightsPage extends StatelessWidget {
               icon: const Icon(Icons.calendar_month),
               label: const Text("May 15 – May 21, 2025"),
             ),
+
             const SizedBox(width: 12),
+
             ElevatedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.ios_share),
@@ -99,17 +128,25 @@ class AIInsightsPage extends StatelessWidget {
   Widget _buildKpiRow() {
     return FutureBuilder<DashboardStats>(
       future: AnalyticsService.fetchDashboardStats(),
+
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
             height: 128,
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
           );
         }
+
         if (snapshot.hasError) {
           return SizedBox(
             height: 128,
-            child: Center(child: Text("Couldn't load KPIs: ${snapshot.error}")),
+            child: Center(
+              child: Text(
+                "Couldn't load KPIs: ${snapshot.error}",
+              ),
+            ),
           );
         }
 
@@ -118,35 +155,49 @@ class AIInsightsPage extends StatelessWidget {
         final cards = <Widget>[
           AIKpiCard(
             title: "Total Revenue",
-            value: formatCurrency(stats.totalRevenue.value),
-            change: formatPct(stats.totalRevenue.changePct),
-            isPositive: (stats.totalRevenue.changePct ?? 0) >= 0,
+            value: formatCurrency(
+              stats.totalRevenue.value,
+            ),
+            change: formatPct(
+              stats.totalRevenue.changePct,
+            ),
+            isPositive:
+                (stats.totalRevenue.changePct ?? 0) >= 0,
             icon: Icons.trending_up,
             color: const Color(0xFF6C4DFF),
           ),
+
           const AIKpiCard(
             title: "New Leads",
             icon: Icons.person_add_alt,
             color: Colors.blue,
-            available: false, // no `leads` table yet
+            available: false,
           ),
+
           AIKpiCard(
             title: "Conversion Rate",
             icon: Icons.track_changes,
             color: Colors.green,
             available: stats.conversionRate.available,
           ),
+
           const AIKpiCard(
             title: "Click Through Rate",
             icon: Icons.mouse,
             color: Colors.deepOrange,
-            available: false, // no ad-click tracking yet
+            available: false,
           ),
+
           AIKpiCard(
             title: "Avg Order Value",
-            value: formatCurrency(stats.avgOrderValue.value),
-            change: formatPct(stats.avgOrderValue.changePct),
-            isPositive: (stats.avgOrderValue.changePct ?? 0) >= 0,
+            value: formatCurrency(
+              stats.avgOrderValue.value,
+            ),
+            change: formatPct(
+              stats.avgOrderValue.changePct,
+            ),
+            isPositive:
+                (stats.avgOrderValue.changePct ?? 0) >= 0,
             icon: Icons.shopping_cart,
             color: Colors.purple,
           ),
@@ -155,8 +206,12 @@ class AIInsightsPage extends StatelessWidget {
         return Row(
           children: [
             for (int i = 0; i < cards.length; i++) ...[
-              Expanded(child: cards[i]),
-              if (i != cards.length - 1) const SizedBox(width: 16),
+              Expanded(
+                child: cards[i],
+              ),
+
+              if (i != cards.length - 1)
+                const SizedBox(width: 16),
             ],
           ],
         );
@@ -173,33 +228,52 @@ class AIInsightsPage extends StatelessWidget {
             flex: 2,
             child: Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
               child: const SizedBox(
                 height: 320,
-                // Already wired to real revenue-per-month data via analytics.py
+
+                // Real revenue-per-month data
                 child: RevenueTrendChart(),
               ),
             ),
           ),
-          const SizedBox(width: 20),    
-          const Expanded(child: CampaignListCard()),
+
           const SizedBox(width: 20),
-          
-          const Expanded(child: AudienceDonutCard()),
+
+          const Expanded(
+            child: CampaignListCard(),
+          ),
+
+          const SizedBox(width: 20),
+
+          const Expanded(
+            child: AudienceDonutCard(),
+          ),
         ],
       ),
     );
   }
 
-  /// New row: the two cards that are now backed by real data.
+  /// Row containing cards backed by real data.
   Widget _buildRow1b() {
     return const IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: TopProductsCard()), // real: order_items x products
+          // Real data: order_items x products
+          Expanded(
+            child: TopProductsCard(),
+          ),
+
           SizedBox(width: 20),
-          Expanded(child: CustomerCityDistributionCard()), // real: customers.city
+
+          // Real data: customers.city
+          Expanded(
+            child: CustomerCityDistributionCard(),
+          ),
         ],
       ),
     );
@@ -210,12 +284,22 @@ class AIInsightsPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // NOTE: still demo data — needs review/social text + NLP pipeline
-          Expanded(child: SentimentGaugeCard()),
+          // Demo data — needs review/social text + NLP pipeline
+          Expanded(
+            child: SentimentGaugeCard(),
+          ),
+
           SizedBox(width: 20),
-          Expanded(child: TopicsOfInterestCard()),
+
+          Expanded(
+            child: TopicsOfInterestCard(),
+          ),
+
           SizedBox(width: 20),
-          Expanded(child: AIRecommendationCard()),
+
+          Expanded(
+            child: AIRecommendationCard(),
+          ),
         ],
       ),
     );

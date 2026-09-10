@@ -8,6 +8,8 @@ import 'screens/campaign_generator_page.dart';
 import 'services/campaign_services.dart';
 import 'services/notification_service.dart';
 import 'screens/post_generator_page.dart';
+import 'screens/products_page.dart';
+
 class AppShell extends StatefulWidget {
   final String role;
 
@@ -19,6 +21,7 @@ class AppShell extends StatefulWidget {
   @override
   State<AppShell> createState() => _AppShellState();
 }
+
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
@@ -68,7 +71,6 @@ class _AppShellState extends State<AppShell> {
       case "Dashboard":
         return const DashboardPage();
 
-
       case "Dataset Upload":
         return const DatasetUploadPage();
 
@@ -76,6 +78,9 @@ class _AppShellState extends State<AppShell> {
         return const Center(
           child: Text("Customers - Coming Soon"),
         );
+
+      case "Products":
+        return const ProductsPage();
 
       case "Campaign Generator":
         return CampaignGeneratorPage(
@@ -98,11 +103,15 @@ class _AppShellState extends State<AppShell> {
           child: Text("Settings - Coming Soon"),
         );
 
+      case "Reports":
+        return const Center(
+          child: Text("Reports - Coming Soon"),
+        );
+
       default:
         return const Center(
           child: Text("Coming Soon"),
-        );      
-
+        );
     }
   }
 

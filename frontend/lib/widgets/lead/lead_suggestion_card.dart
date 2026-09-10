@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/lead_suggestions.dart';
-import '../services/lead_services.dart';
+import '../../models/lead_suggestions.dart';
+import '../../services/lead_services.dart';
 
 class LeadSuggestionsCard extends StatelessWidget {
   const LeadSuggestionsCard({super.key});
