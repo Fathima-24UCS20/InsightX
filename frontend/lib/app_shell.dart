@@ -6,6 +6,7 @@ import 'screens/db_upload.dart';
 import 'screens/ai_insights_page.dart';
 import 'screens/campaign_generator_page.dart';
 import 'services/campaign_services.dart';
+import 'services/notification_service.dart';
 import 'screens/post_generator_page.dart';
 class AppShell extends StatefulWidget {
   final String role;
@@ -23,6 +24,38 @@ class _AppShellState extends State<AppShell> {
 
   // NEW
   bool _isSidebarExpanded = true;
+  late final NotificationService _notificationService;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _notificationService = NotificationService(
+      baseUrl: "http://127.0.0.1:8000",
+    );
+
+    _notificationService.start(
+      onNotification: (notification) {
+        if (!mounted) return;
+
+        final title = notification['title']?.toString() ?? 'InsightX';
+        final message = notification['message']?.toString() ?? '';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$title\n$message'),
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _notificationService.dispose();
+    super.dispose();
+  }
 
   Widget _bodyFor(int index) {
     final visibleItems = AppSidebar.allItems

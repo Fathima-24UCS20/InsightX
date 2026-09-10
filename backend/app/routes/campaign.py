@@ -6,10 +6,13 @@ import json
 from google import genai
 from fastapi import Depends, HTTPException
 from app.database import get_db
-from app.models import Campaign
+from app.models import Campaign, SocialPost, Notification
 from fastapi import APIRouter
 
 from app.schemas.campaigns import CampaignCreate
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
@@ -191,6 +194,7 @@ def save_campaign(
     channels=data.channels,      # <-- ADD THIS
 
     tone=data.tone,
+    post_time=data.post_time,
     additional_info=data.additional_info,
 
     budget=data.budget,
@@ -220,6 +224,7 @@ def save_campaign(
         "product_label": campaign.product_label,
         "target_segment": campaign.target_segment,
         "tone": campaign.tone,
+        "post_time": campaign.post_time,
         "additional_info": campaign.additional_info,
         "budget": float(campaign.budget)
         if campaign.budget
@@ -254,6 +259,7 @@ def get_campaigns(
             "product_label": c.product_label,
             "target_segment": c.target_segment,
             "tone": c.tone,
+            "post_time": c.post_time,
             "additional_info": c.additional_info,
             "budget": float(c.budget)
             if c.budget
@@ -273,10 +279,67 @@ def get_campaigns(
         for c in campaigns
     ]
 @router.delete("/{campaign_id}")
-def delete_campaign(campaign_id: int, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.campaign_id == campaign_id).first()
+def delete_campaign(
+    campaign_id: int,
+    db: Session = Depends(get_db),
+):
+    campaign = (
+        db.query(Campaign)
+        .filter(Campaign.campaign_id == campaign_id)
+        .first()
+    )
+
     if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    db.delete(campaign)
-    db.commit()
-    return {"detail": "Campaign deleted", "campaign_id": campaign_id}
+        raise HTTPException(
+            status_code=404,
+            detail="Campaign not found",
+        )
+
+    try:
+        # 1. Find all social posts belonging to this campaign
+        posts = (
+            db.query(SocialPost)
+            .filter(
+                SocialPost.campaign_id == campaign_id
+            )
+            .all()
+        )
+
+        # 2. Delete notifications linked to those posts
+        for post in posts:
+            db.query(Notification).filter(
+                Notification.scheduled_post_id == post.id
+            ).delete(
+                synchronize_session=False
+            )
+
+        # 3. Delete social posts
+        db.query(SocialPost).filter(
+            SocialPost.campaign_id == campaign_id
+        ).delete(
+            synchronize_session=False
+        )
+
+        # 4. Delete campaign
+        db.delete(campaign)
+
+        # 5. Commit everything together
+        db.commit()
+
+        return {
+            "detail": "Campaign deleted successfully",
+            "campaign_id": campaign_id,
+        }
+
+    except Exception as e:
+        db.rollback()
+
+        print(
+            f"Failed to delete campaign "
+            f"{campaign_id}: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete campaign and its related data.",
+        )

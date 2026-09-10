@@ -25,6 +25,8 @@ class CampaignCreate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
+    post_time: Optional[str] = None
+
     generated_copy: Optional[dict] = None
 
     status: str = "draft"

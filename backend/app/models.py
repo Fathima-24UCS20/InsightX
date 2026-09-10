@@ -9,6 +9,7 @@ from sqlalchemy import (
     TIMESTAMP,
     Text,
     DateTime,
+    Boolean,
 )
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
@@ -34,7 +35,9 @@ class Campaign(Base):
     target_segment = Column(JSON)
     channels = Column(JSON, nullable=True)
 
-    tone = Column(String)
+    tone = Column(String)    
+
+    post_time = Column(String)          # NEW — e.g. "09:00 AM", applies to every day of the campaign
     additional_info = Column(String)
 
     budget = Column(Numeric)
@@ -193,3 +196,24 @@ class SocialPost(Base):
         TIMESTAMP,
         server_default=func.now(),
     )
+
+# -------------------------
+# Notification Model
+# -------------------------
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    scheduled_post_id = Column(
+        Integer,
+        ForeignKey("social_posts.id"),
+        nullable=True,
+        index=True,
+    )
+
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    notification_type = Column(String(50), default="post_generated", nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())

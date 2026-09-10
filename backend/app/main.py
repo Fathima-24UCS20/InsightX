@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from dotenv import load_dotenv
+
+import asyncio
+
+from app.scheduler.campaign_scheduler import scheduler_loop
 
 load_dotenv()
 
@@ -20,8 +26,20 @@ from app.routes.product import router as product_router
 from app.routes.customer import router as customer_router
 from app.routes.campaign import router as campaign_router
 from app.routes.social_post import router as social_post_router
+from app.routes.notifications import router as notifications_router
 
 app = FastAPI()
+
+# Folder for generated social media images
+GENERATED_POSTS_DIR = Path("generated_posts")
+GENERATED_POSTS_DIR.mkdir(exist_ok=True)
+
+# Make generated images accessible to Flutter
+app.mount(
+    "/generated-posts",
+    StaticFiles(directory=GENERATED_POSTS_DIR),
+    name="generated-posts",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,9 +59,15 @@ app.include_router(customer_router)
 app.include_router(product_router)
 app.include_router(campaign_router)
 app.include_router(social_post_router)
+app.include_router(notifications_router)
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     init_db()
+
+    asyncio.create_task(
+        scheduler_loop()
+    )
+
 
 @app.get("/")
 def home():

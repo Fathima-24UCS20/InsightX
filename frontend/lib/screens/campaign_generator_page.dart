@@ -357,6 +357,7 @@ DateTime? _endDate;
     CampaignChannel.linkedin,
     CampaignChannel.twitter,
   };
+  TimeOfDay? _postTime;
   final _additionalInfoController = TextEditingController();
   final _campaignNameController = TextEditingController();
 
@@ -422,12 +423,16 @@ DateTime? _endDate;
     discount: double.tryParse(_discountController.text),
 
     startDate: _startDate,
-    endDate: _endDate,
+endDate: _endDate,
 
-    additionalInfo: _additionalInfoController.text.isEmpty
-        ? null
-        : _additionalInfoController.text,
+postTime: _postTime == null
+    ? null
+    : '${_postTime!.hour.toString().padLeft(2, '0')}:'
+      '${_postTime!.minute.toString().padLeft(2, '0')}',
 
+additionalInfo: _additionalInfoController.text.isEmpty
+    ? null
+    : _additionalInfoController.text,
     createdAt: DateTime.now(),
 );
   }
@@ -469,6 +474,7 @@ DateTime? _endDate;
   channels: draft.channels,
   tone: draft.tone,
   additionalInfo: draft.additionalInfo,
+  postTime: draft.postTime,
   budget: draft.budget,
   discount: draft.discount,
   startDate: draft.startDate,
@@ -648,7 +654,7 @@ DateTime? _endDate;
               TextField(
                 controller: _campaignNameController,
                 decoration: _fieldDecoration(
-                  'Campaign Name (optional)',
+                  'Campaign Name',
                   hint: 'Defaults to objective + product',
                 ),
               ),
@@ -686,6 +692,7 @@ DropdownButtonFormField<CampaignGoal>(
               // replacing the free-text field in the original mockup.
               DropdownButtonFormField<Product>(
                 value: _selectedProduct,
+                isExpanded: true,
                 decoration: _fieldDecoration('Product / Service'),
                 icon: const Icon(Icons.keyboard_arrow_down, color: _Palette.textSecondary),
                 items: _products
@@ -780,6 +787,7 @@ Row(
         },
       ),
     ),
+    
 
     const SizedBox(width: 16),
 
@@ -821,6 +829,38 @@ Row(
       ),
     ),
   ],
+),
+const SizedBox(height: 16),
+
+OutlinedButton.icon(
+  icon: const Icon(Icons.access_time),
+  label: Text(
+    _postTime == null
+        ? 'Daily Post Generation Time'
+        : 'Daily Post Generation Time  •  ${_postTime!.format(context)} IST',
+  ),
+  onPressed: () async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _postTime ?? const TimeOfDay(hour: 10, minute: 0),
+      helpText: 'Select daily post generation time',
+    );
+
+    if (picked != null) {
+      setState(() {
+        _postTime = picked;
+      });
+    }
+  },
+  style: OutlinedButton.styleFrom(
+    minimumSize: const Size.fromHeight(52),
+    foregroundColor: _Palette.textPrimary,
+    side: const BorderSide(color: _Palette.border),
+    backgroundColor: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    ),
+  ),
 ),
               const SizedBox(height: 20),
               const Text(
